@@ -57,7 +57,7 @@ async fn assert_stays_online(node: &TestNode, endpoint_id: &str, window: Duratio
     while tokio::time::Instant::now() < end {
         assert!(
             is_online(node, endpoint_id),
-            "presence flipped offline after the probe — the paired session was clobbered"
+            "presence flipped offline after the probe, the paired session was clobbered"
         );
         tokio::time::sleep(Duration::from_millis(200)).await;
     }
@@ -79,7 +79,7 @@ async fn unpaired_peer_can_probe_identity_when_discoverable_to_everyone() {
 }
 
 /// A stranger probing in a tight loop exhausts its token bucket and gets
-/// closed rather than served — see `native/src/rate_limit.rs`.
+/// closed rather than served, see `native/src/rate_limit.rs`.
 #[tokio::test]
 async fn unpaired_probe_loop_is_rate_limited() {
     let alice = common::spawn_node("alice").await;
@@ -219,7 +219,7 @@ async fn peer_outbound_flaps_do_not_clear_our_presence() {
         tokio::time::sleep(Duration::from_millis(200)).await;
     }
 
-    // Bob is the device under test — his view of alice must stay online.
+    // Bob is the device under test, his view of alice must stay online.
     assert_stays_online(&bob, &alice.endpoint_id(), Duration::from_secs(5)).await;
 }
 
@@ -280,7 +280,7 @@ async fn discoverability_off_then_on_rebuilds_the_endpoint_repeatedly() {
     }
 }
 
-/// `Everyone` <-> `PairedOnly` must not touch mDNS state at all — no rebuild,
+/// `Everyone` <-> `PairedOnly` must not touch mDNS state at all, no rebuild,
 /// no network-warming blip.
 #[tokio::test]
 async fn paired_only_transition_does_not_rebuild_the_network() {
@@ -345,10 +345,10 @@ async fn concurrent_discoverability_toggle_and_reconfigure_settle_consistently()
     .await;
 }
 
-/// Real multicast — opt-in, see `two_nodes_discover_each_other_over_mdns`.
+/// Real multicast, opt-in, see `two_nodes_discover_each_other_over_mdns`.
 ///
 /// A peer that goes `Off` must disappear from the *other* side's Nearby list,
-/// not just clear its own — aborting the consumer task alone left the
+/// not just clear its own, aborting the consumer task alone left the
 /// registered `MdnsAddressLookup` advertising forever.
 #[tokio::test]
 #[ignore = "requires multicast on the local network"]
@@ -374,14 +374,14 @@ async fn discoverability_off_stops_mdns_advertising() {
     .await;
     assert!(
         vanished,
-        "alice must actually stop advertising once Off — bob should stop seeing her, \
+        "alice must actually stop advertising once Off, bob should stop seeing her, \
          not just have her own local list clear"
     );
 }
 
 // The tests below seed the Nearby list via `inject_nearby_device_for_tests`
 // rather than real multicast, so they run on any CI runner. `NearbyRegistry`
-// is pure state — only the socket is skipped.
+// is pure state, only the socket is skipped.
 
 #[tokio::test]
 async fn accepting_a_nearby_invite_promotes_the_sender_to_paired() {
@@ -501,7 +501,7 @@ async fn declining_a_nearby_invite_leaves_the_sender_unpaired() {
         "declining must not pair"
     );
 
-    // Sender-side decline, same event as an accept — polled for the same reason.
+    // Sender-side decline, same event as an accept, polled for the same reason.
     common::wait_until(
         "alice to observe bob's decline",
         Duration::from_secs(15),
@@ -549,7 +549,7 @@ async fn a_promoted_device_leaves_the_nearby_list() {
     );
 }
 
-/// The accept notification back to a vanished sender is best-effort — the
+/// The accept notification back to a vanished sender is best-effort, the
 /// durable side effects already happened, so `accept_nearby_invite` must not
 /// return `Err`.
 #[tokio::test]
@@ -580,7 +580,7 @@ async fn accept_nearby_invite_succeeds_even_if_the_sender_is_unreachable() {
 }
 
 /// An unpaired peer may send `InviteResponse`, but only one matching an invite
-/// we actually sent may be acted on — otherwise a stranger could spoof an
+/// we actually sent may be acted on, otherwise a stranger could spoof an
 /// acceptance.
 #[tokio::test]
 async fn unsolicited_invite_response_from_an_unpaired_peer_is_ignored() {
@@ -772,7 +772,7 @@ async fn the_initiator_stores_the_peer_name_when_the_probe_lands_late() {
 /// A declined nearby pair request must name the peer that declined.
 ///
 /// Regression: the name was resolved from `paired_store` alone, and a decline
-/// creates no record there — so the UI showed an endpoint-id prefix.
+/// creates no record there, so the UI showed an endpoint-id prefix.
 #[tokio::test]
 async fn a_declined_nearby_pair_request_names_the_peer_that_declined() {
     let alice = common::spawn_node("alice").await;
@@ -821,7 +821,7 @@ async fn a_declined_nearby_pair_request_names_the_peer_that_declined() {
 ///
 /// Regression: `handle_control_session` snapshotted paired-ness at accept time.
 /// Nearby pairing opens two connections back to back, so the `Recognition` on
-/// the second was rejected 403 by a session snapshotted before the commit —
+/// the second was rejected 403 by a session snapshotted before the commit , 
 /// which the dialer reads as a remote unpair.
 #[tokio::test]
 async fn a_pairing_that_commits_mid_session_is_not_rejected_as_unpaired() {
@@ -829,7 +829,7 @@ async fn a_pairing_that_commits_mid_session_is_not_rejected_as_unpaired() {
     let bob = common::spawn_node("bob").await;
     bob.set_discoverability(Discoverability::Everyone).await;
 
-    // Accepted while alice is still a stranger — the session that loses the race.
+    // Accepted while alice is still a stranger, the session that loses the race.
     let conn = open_stranger_control_connection(&alice, &bob).await;
 
     // Both halves commit after that connection was accepted.
@@ -878,7 +878,7 @@ async fn a_strangers_recognition_is_still_rejected() {
 }
 
 /// A `Recognition` refused while a fresh pairing is still settling means the
-/// peer has not committed its half yet — not that it unpaired us.
+/// peer has not committed its half yet, not that it unpaired us.
 ///
 /// Regression: any 403 close was read as a remote unpair, so a peer committing
 /// a beat late flipped our record to `UnpairedRemotely`.
@@ -894,7 +894,7 @@ async fn a_recognition_refused_while_the_pairing_settles_does_not_unpair() {
         .await
         .expect("alice commits the pairing");
 
-    // Long enough for alice's first dial to be refused — `has_direct_path`
+    // Long enough for alice's first dial to be refused, `has_direct_path`
     // alone holds a stranger's connection for three seconds.
     tokio::time::sleep(Duration::from_millis(3_500)).await;
     bob.remember_paired_device_for_tests(&alice.endpoint_id())

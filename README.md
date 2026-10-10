@@ -2,7 +2,7 @@
 
 Send files and text straight to your own devices.
 
-Pair once with a trusted peer — a desktop or an Android phone — and flipflop
+Pair once with a trusted peer, a desktop or an Android phone, and flipflop
 keeps a private channel open between you, at home or anywhere else. Drop files
 or paste any text, and it lands directly on the other side. Each peer gets its
 own history of what went back and forth.

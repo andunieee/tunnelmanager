@@ -2,35 +2,35 @@
 
 Native Rust GUI built with [Slint](https://slint.dev), replacing the Tauri + React
 frontend. It drives the same P2P engine module (`src/engine.rs`, re-exporting
-`src/native` + `src/protocol`) directly — no Tauri,
+`src/native` + `src/protocol`) directly, no Tauri,
 no webview, no JavaScript.
 
 ## Scope
 
 Implemented:
 
-- **Peers** — sidebar lists known peers from the paired-device store with
+- **Peers**, sidebar lists known peers from the paired-device store with
   presence dots; rename/forget a peer; rename your own device in Settings
   (set via `set_device_display_name`); per-peer pages show history and a
   "Send files…" button.
-- **Add peer** — paste the peer's iroh address/ticket (`join_pairing`), or add
+- **Add peer**, paste the peer's iroh address/ticket (`join_pairing`), or add
   one of the suggested peers: LAN mDNS neighbours and inbound pair requests
   (`request_nearby_pair` / `accept_nearby_invite`, decline supported).
-- **Send** — pick files/folders, share them, deliver directly to the peer with
+- **Send**, pick files/folders, share them, deliver directly to the peer with
   `invite_paired_device`; live progress and speed, stop sharing. The share
   closes by itself once the peer has everything.
-- **Receive** — automatic: paired peers' file invites are accepted and
+- **Receive**, automatic: paired peers' file invites are accepted and
   downloaded into `<downloads folder>/flipflop/<peer-name>` without
   prompts; progress + cancel; conflict renaming recorded. Cancelled/failed
   receives keep their partial store for resume; deleting the history row
   frees it.
-- **Transfers** — any number of sends and receives run at once (different
+- **Transfers**, any number of sends and receives run at once (different
   peers); each peer's page shows its own transfer cards, and the sidebar marks
   peers with a transfer in flight (↑/↓).
-- **Settings** — downloads folder, own device name, relay mode (default /
+- **Settings**, downloads folder, own device name, relay mode (default /
   disabled / custom URLs + auth token), local discovery (everyone / paired
   only / off), history toggle; persisted to `settings.json`.
-- **Notifications** — toasts: an in-window overlay on desktop, native
+- **Notifications**, toasts: an in-window overlay on desktop, native
   `Toast`s on Android.
 
 Not implemented (v1): tray, autostart, updater. Engine-level transfer behavior
@@ -61,7 +61,7 @@ Platform integration (see `src/android.rs`):
 
 - **Clipboard / toasts** go through JNI (`ClipboardManager`, `Toast`) on the
   Java main thread.
-- **Sending**: pick files through the system share sheet — "Share →
+- **Sending**: pick files through the system share sheet, "Share →
   flipflop" from any app stages the content (files, or shared text/links
   as a `.txt`) into an app-private outbox; the app opens the peer picker, a
   toast shows the count, and "Send" on a peer sends the staged content. A
@@ -111,27 +111,27 @@ carries its own `rust-toolchain.toml` (1.92). `tinyvec` is pinned to
 
 ## Layout
 
-- `ui/` — Slint markup (`globals.slint` holds shared state + logic callbacks,
+- `ui/`, Slint markup (`globals.slint` holds shared state + logic callbacks,
   one file per page; `State.compact`/`State.touch` drive the responsive
   single-pane/touch layout). `ui/icons/` holds the line icons, exposed through
   the `Icons` global in `components.slint`.
-- `android/` — Android resources (launcher icon, launch theme) and their
+- `android/`, Android resources (launcher icon, launch theme) and their
   sources.
-- `src/lib.rs` — crate root: shared by the desktop bin and the Android
+- `src/lib.rs`, crate root: shared by the desktop bin and the Android
   `cdylib`.
-- `src/main.rs` — desktop entry point.
-- `src/app.rs` — startup, node events, peers/pairing/history/settings wiring.
-- `src/transfers.rs` — send and receive flows; one `TransferRow` per transfer.
-- `src/platform.rs` — per-platform clipboard, toasts, dialogs, "open", data
+- `src/main.rs`, desktop entry point.
+- `src/app.rs`, startup, node events, peers/pairing/history/settings wiring.
+- `src/transfers.rs`, send and receive flows; one `TransferRow` per transfer.
+- `src/platform.rs`, per-platform clipboard, toasts, dialogs, "open", data
   dir and logging.
-- `src/android.rs` — Android platform services (JNI clipboard + toast,
+- `src/android.rs`, Android platform services (JNI clipboard + toast,
   share-sheet outbox, `android_main`).
-- `src/emitter.rs` — the node service's `EventEmitter` (an event queue the UI
+- `src/emitter.rs`, the node service's `EventEmitter` (an event queue the UI
   drains on a timer) and `apply_transfer_event`, the engine event → transfer
   row mapping.
-- `src/recorder.rs` — slim port of the Tauri shell's history recorder.
-- `src/settings.rs` — settings persistence.
-- `examples/screenshots.rs` — renders every page with sample data, headless.
+- `src/recorder.rs`, slim port of the Tauri shell's history recorder.
+- `src/settings.rs`, settings persistence.
+- `examples/screenshots.rs`, renders every page with sample data, headless.
 
 ## Development
 
@@ -141,5 +141,5 @@ cargo run --example screenshots -- /tmp/shots   # PPM renders of each page (desk
 ```
 
 The screenshot example uses Slint's software renderer, so it needs no display
-and starts no node — handy for checking layout changes. The std-widgets are
+and starts no node, handy for checking layout changes. The std-widgets are
 pinned to the `fluent-light` style in `build.rs`.

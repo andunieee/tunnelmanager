@@ -10,11 +10,11 @@ pub const PAIRED_RECONNECT_MAX_SECS: u64 = 60;
 
 /// How long a freshly stored pairing counts as still settling. Each side commits
 /// independently, so a `Recognition` refused this soon means the peer hasn't
-/// stored its half yet — see `PairedConnectionManager::connect_loop`.
+/// stored its half yet, see `PairedConnectionManager::connect_loop`.
 pub const RECENT_PAIRING_GRACE_MS: u64 = 10_000;
 
 /// Backoff after a `Recognition` refused while the pairing is settling. Shorter
-/// than [`PAIRED_RECONNECT_MIN_SECS`] — the peer's half lands in milliseconds.
+/// than [`PAIRED_RECONNECT_MIN_SECS`], the peer's half lands in milliseconds.
 pub const SETTLING_PAIRING_RETRY_SECS: u64 = 2;
 
 /// How long invite delivery waits for a live paired connection.

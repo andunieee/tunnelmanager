@@ -88,7 +88,7 @@ jobs:
       - name: Verify APK signature
         run: |
           # NOTE: target/release/apk also holds an unsigned *-unaligned.apk
-          # intermediate (plus .idsig sidecar) — verify the exact signed APK.
+          # intermediate (plus .idsig sidecar), verify the exact signed APK.
           apk=target/release/apk/flipflop.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$apk"
           mkdir dist

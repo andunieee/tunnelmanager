@@ -93,7 +93,7 @@ fn transfer_payload_complete(bytes_sent: u64, total_size: u64) -> bool {
     if total_size == 0 {
         return true;
     }
-    // Size probes only fetch hash-seq headers and last chunks — far below payload size.
+    // Size probes only fetch hash-seq headers and last chunks, far below payload size.
     bytes_sent.saturating_mul(100) >= total_size.saturating_mul(95)
 }
 

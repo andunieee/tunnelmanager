@@ -122,14 +122,14 @@ fn populate(state: &State<'_>) {
         received.clone(),
     ]));
     state.set_visible_transfers(model(vec![photos, pasted, received]));
-    state.set_paste_input("Door code is 4711 — see you at 8!".into());
+    state.set_paste_input("Door code is 4711, see you at 8!".into());
 
     state.set_history(model(vec![
         history("slides-final.pdf", true, "Completed", "ok", "2.4 MB"),
         HistoryRow {
             title: "Pasted text".into(),
             detail: "flipflop-paste.txt".into(),
-            preview: "Door code is 4471, the spare key is under the blue pot by the back steps — feed the cat twice a day".into(),
+            preview: "Door code is 4471, the spare key is under the blue pot by the back steps, feed the cat twice a day".into(),
             ..history("paste", false, "Completed", "ok", "96 B")
         },
         history("beach-video.mp4", false, "Interrupted", "warn", "1.1 GB"),
@@ -161,7 +161,7 @@ fn populate(state: &State<'_>) {
     state.set_my_ticket(
         "pairab3xkq7lmz2vcd9u4ohw6gtnr5yfej8si0pq1x3b7m2kz9u5c4wv8hd6tn0ry3jf7".into(),
     );
-    state.set_pairing_status("Pair request sent — waiting for them to accept".into());
+    state.set_pairing_status("Pair request sent, waiting for them to accept".into());
     state.set_downloads_dir("/home/me/Downloads".into());
     state.set_relay_mode(2);
     state.set_relay_urls("https://relay1.example.com\nhttps://relay2.example.com".into());

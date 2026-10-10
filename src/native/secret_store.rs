@@ -7,7 +7,7 @@ const SERVICE: &str = "alt-sendme";
 const USER: &str = "iroh-secret";
 
 /// Android has no real OS keychain backend in `keyring` (mock only). Identity
-/// persistence uses `identity.key` exclusively — skip keychain I/O here.
+/// persistence uses `identity.key` exclusively, skip keychain I/O here.
 #[cfg(target_os = "android")]
 pub fn load_secret_hex() -> anyhow::Result<Option<String>> {
     Ok(None)

@@ -37,10 +37,10 @@ pub enum ControlMessage {
     Forget {
         signature: String,
     },
-    /// Asks an unpaired LAN peer to identify itself — mDNS carries only node
+    /// Asks an unpaired LAN peer to identify itself, mDNS carries only node
     /// ids and addresses, so this is the only source of a readable name.
     WhoAreYou,
-    /// Reply to `WhoAreYou`. Unsigned and self-reported — the trust anchor is
+    /// Reply to `WhoAreYou`. Unsigned and self-reported, the trust anchor is
     /// the connection's public-key binding, shown as `short_fingerprint`.
     Identity {
         endpoint_id: String,
@@ -63,7 +63,7 @@ pub enum ControlMessage {
 
 impl ControlMessage {
     /// Stable label for diagnostics, matching the serde tag. The variant name
-    /// and nothing else — payloads carry names, tickets and signatures.
+    /// and nothing else, payloads carry names, tickets and signatures.
     pub fn kind(&self) -> &'static str {
         match self {
             Self::PairingInfo { .. } => "pairing-info",
@@ -269,7 +269,7 @@ mod nearby_message_tests {
     }
 
     /// `kind()` feeds the diagnostic logs, so it must not drift from the wire
-    /// tag — a renamed variant would otherwise silently relabel every log line.
+    /// tag, a renamed variant would otherwise silently relabel every log line.
     #[test]
     fn kind_matches_the_serde_tag() {
         let samples = [

@@ -125,7 +125,7 @@ impl PairedConnectionManager {
 
     }
 
-    /// Resets a paired device's reconnect backoff and connects immediately —
+    /// Resets a paired device's reconnect backoff and connects immediately , 
     /// used when mDNS reports it just appeared, rather than waiting out a
     /// backoff that may be minutes long.
     ///
@@ -160,7 +160,7 @@ impl PairedConnectionManager {
         }
     }
 
-    /// Test-only: the old nudge behaviour — abort and re-dial even when a live
+    /// Test-only: the old nudge behaviour, abort and re-dial even when a live
     /// session exists. Used to simulate an unfixed peer flapping its outbound.
     #[doc(hidden)]
     pub async fn force_reconnect_for_tests(&self, endpoint_id: &str) {
@@ -255,7 +255,7 @@ impl PairedConnectionManager {
     pub async fn register_inbound(&self, endpoint_id: &str, conn: Connection) {
         let key = endpoint_id.to_lowercase();
         // Don't replace a session we already hold (almost always our own
-        // outbound) — the inbound is still served for invites, and replacing
+        // outbound), the inbound is still served for invites, and replacing
         // would let its later unregister wipe our live outbound.
         if self.sessions.read().await.contains_key(&key) {
             set_presence(
@@ -349,7 +349,7 @@ impl PairedConnectionManager {
                     // us accepts the dial then rejects Recognition, so treat
                     // that close as a remote unpair.
                     //
-                    // Unless the pairing is still settling — each side commits
+                    // Unless the pairing is still settling, each side commits
                     // independently, so a refusal this soon means the peer
                     // hasn't stored their half yet.
                     let close_err = conn.closed().await;
@@ -667,7 +667,7 @@ impl PairedConnectionManager {
 }
 
 /// Peer closed after rejecting our Recognition as an unpaired stranger.
-/// (`b"unpaired"` is the ack after *they* processed our Forget — not a signal
+/// (`b"unpaired"` is the ack after *they* processed our Forget, not a signal
 /// that we should mark *them* unpaired-remotely.)
 fn close_implies_remote_unpair(err: &ConnectionError) -> bool {
     matches!(

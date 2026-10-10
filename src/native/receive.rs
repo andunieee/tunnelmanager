@@ -68,7 +68,7 @@ pub(crate) async fn download(
     let (total_files, payload_size, _stats, conflict_count) = match select! {
         result = transfer => result,
         _ = cancel_rx => {
-            tracing::info!("Download cancelled by user — preserving partial store for resume");
+            tracing::info!("Download cancelled by user, preserving partial store for resume");
             cleanup_guard.disarm();
             db2.shutdown().await?;
             anyhow::bail!("cancelled");

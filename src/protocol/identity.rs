@@ -207,7 +207,7 @@ pub fn device_type_from_mac_model(model: &str) -> Option<&'static str> {
     if lower.is_empty() {
         return None;
     }
-    // MacBook, MacBookAir, MacBookPro — and any future *Book* marketing name.
+    // MacBook, MacBookAir, MacBookPro, and any future *Book* marketing name.
     if lower.contains("book") {
         return Some("laptop");
     }
@@ -275,7 +275,7 @@ fn macos_has_internal_battery() -> Option<bool> {
 
 /// Map SMBIOS chassis type codes to a form-factor string.
 ///
-/// See [SMBIOS Reference Specification](https://www.dmtf.org/standards/smbios) —
+/// See [SMBIOS Reference Specification](https://www.dmtf.org/standards/smbios) , 
 /// System Enclosure or Chassis Types.
 pub fn device_type_from_chassis(chassis: u32) -> Option<&'static str> {
     match chassis {

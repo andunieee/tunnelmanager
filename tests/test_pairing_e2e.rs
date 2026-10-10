@@ -158,7 +158,7 @@ async fn e2e_pairing_lifecycle() {
 }
 
 /// When `Forget` never arrives, the remaining side must detect the peer's
-/// "not permitted for unpaired peer" close and mark `UnpairedRemotely` —
+/// "not permitted for unpaired peer" close and mark `UnpairedRemotely` , 
 /// otherwise it keeps the peer `Active` and flaps online every reconnect tick.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn missed_forget_still_marks_unpaired_remotely() {

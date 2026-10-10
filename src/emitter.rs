@@ -56,7 +56,7 @@ pub fn apply_transfer_event(row: &mut TransferRow, name: &str, payload: Option<&
             row.error = "".into();
         }
         "share-peer-connected" => {
-            row.status = "Peer connected — transferring…".into();
+            row.status = "Peer connected, transferring…".into();
         }
         "transfer-progress" | "receive-progress" => {
             if let Some((bytes, total, speed)) = payload.and_then(parse_progress) {
@@ -95,7 +95,7 @@ pub fn apply_transfer_event(row: &mut TransferRow, name: &str, payload: Option<&
         "transfer-failed" => {
             // The share stays open: the receiver may retry and resume.
             row.speed = "".into();
-            row.error = "Transfer interrupted — the peer can retry while this stays open.".into();
+            row.error = "Transfer interrupted. The peer can retry while this stays open.".into();
         }
         "receive-conflicts" => {
             let count = payload
@@ -142,7 +142,7 @@ mod tests {
         r.progress = 0.5;
         apply_transfer_event(&mut r, "transfer-progress", Some("10:0:0"));
         assert_eq!(r.progress, 0.5);
-        assert_eq!(r.speed.as_str(), "—");
+        assert_eq!(r.speed.as_str(), "-");
     }
 
     #[test]

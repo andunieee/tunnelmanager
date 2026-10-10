@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-/// Burst allowance per endpoint id — above the 2-3 messages a legitimate first
+/// Burst allowance per endpoint id, above the 2-3 messages a legitimate first
 /// contact needs, below anything resembling a spam loop.
 pub(crate) const UNPAIRED_BURST: u32 = 8;
 
@@ -50,7 +50,7 @@ impl UnpairedRateLimiter {
     }
 
     /// Charges one token to `endpoint_id`'s bucket. Returns false when the
-    /// bucket is empty — the caller should drop the message (and connection).
+    /// bucket is empty, the caller should drop the message (and connection).
     pub(crate) fn allow(&mut self, endpoint_id: &str, now: Instant) -> bool {
         let key = endpoint_id.to_lowercase();
 
@@ -81,7 +81,7 @@ impl UnpairedRateLimiter {
         true
     }
 
-    /// Drops buckets that have fully refilled — an idle peer's bucket carries
+    /// Drops buckets that have fully refilled, an idle peer's bucket carries
     /// no state worth keeping, since a fresh entry starts full anyway.
     fn prune(&mut self, now: Instant) {
         let burst = self.burst;

@@ -1,6 +1,6 @@
 //! Registry of devices seen on the local network but not yet paired.
 //!
-//! Deliberately free of I/O — it consumes observations from `lan_discovery`, so
+//! Deliberately free of I/O, it consumes observations from `lan_discovery`, so
 //! the state machine is testable without multicast, which CI often blocks.
 
 use crate::protocol::identity::short_fingerprint;
@@ -23,17 +23,17 @@ pub struct NearbyDevice {
 }
 
 /// How long an entry's identity is trusted before a sighting re-probes it.
-/// Names are pulled (`WhoAreYou` → `Identity`), never pushed — mDNS carries only
+/// Names are pulled (`WhoAreYou` → `Identity`), never pushed, mDNS carries only
 /// ids, so asking again is the only way to notice a rename.
 pub const NEARBY_IDENTITY_REFRESH_MS: u64 = 60_000;
 
 /// What the caller should do after an observation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ObserveOutcome {
-    /// New unpaired peer — run the identity probe.
+    /// New unpaired peer, run the identity probe.
     ProbeNeeded,
     /// Already tracked, but the identity we hold is older than
-    /// [`NEARBY_IDENTITY_REFRESH_MS`] — probe again, without announcing it as
+    /// [`NEARBY_IDENTITY_REFRESH_MS`], probe again, without announcing it as
     /// a new arrival.
     RefreshNeeded,
     /// Already tracked and recently probed; do nothing.
@@ -55,7 +55,7 @@ fn fingerprint_or_invalid(endpoint_id: &str) -> String {
 #[derive(Debug, Clone)]
 struct TrackedDevice {
     device: NearbyDevice,
-    /// When the last probe was *started*, not answered — so a peer that never
+    /// When the last probe was *started*, not answered, so a peer that never
     /// answers retries at the same cadence instead of on every sighting.
     last_probe_at: u64,
 }
@@ -71,7 +71,7 @@ impl NearbyRegistry {
         Self::default()
     }
 
-    /// Logs the outcome of every sighting — a wrapper covers `observe_inner`'s
+    /// Logs the outcome of every sighting, a wrapper covers `observe_inner`'s
     /// five exit paths at once. `now_ms` is injected so the refresh cadence is
     /// testable without waiting out a minute.
     pub fn observe(
@@ -130,7 +130,7 @@ impl NearbyRegistry {
         ObserveOutcome::ProbeNeeded
     }
 
-    /// `true` when this changed the entry — a first identity, or a rename.
+    /// `true` when this changed the entry, a first identity, or a rename.
     /// `false` covers a peer that expired while its probe was in flight and a
     /// refresh that confirmed what we held, so a re-probe doesn't wake the UI.
     ///
@@ -234,7 +234,7 @@ mod tests {
     }
 
     /// Names are pulled, never pushed, so a peer that renames itself is only
-    /// noticed by asking again — see [`NEARBY_IDENTITY_REFRESH_MS`].
+    /// noticed by asking again, see [`NEARBY_IDENTITY_REFRESH_MS`].
     #[test]
     fn a_stale_sighting_asks_the_peer_who_it_is_again() {
         let mut reg = NearbyRegistry::new();
@@ -379,7 +379,7 @@ mod tests {
     fn a_failed_probe_leaves_the_device_listed_but_unidentified() {
         let mut reg = NearbyRegistry::new();
         reg.observe(&id("ff"), false, T0);
-        // No set_identity call — the probe timed out or the peer is an old build.
+        // No set_identity call, the probe timed out or the peer is an old build.
         let listed = reg.list();
         assert_eq!(listed.len(), 1, "must remain sendable, not disappear");
         assert!(!listed[0].identified);

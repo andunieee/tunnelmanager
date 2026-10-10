@@ -552,7 +552,7 @@ fn start_send(
         };
         if delivered {
             tracing::info!(%peer_id, "send: invite delivered, waiting for peer to pull");
-            let status = format!("Delivered — waiting for {peer_name} to download…");
+            let status = format!("Delivered, waiting for {peer_name} to download…");
             post_update(&weak, &key, move |row| {
                 // Progress events may already have moved the status on.
                 if row.status.as_str() == "Contacting peer…" {
@@ -976,7 +976,7 @@ pub(crate) fn register(ctx: &AppCtx) {
                 return;
             }
             let Some(node) = ctx.node() else {
-                toast(&ui, "Still connecting — try again in a moment.", false);
+                toast(&ui, "Still connecting. Try again in a moment.", false);
                 return;
             };
             match write_paste_file(&text) {
@@ -1053,7 +1053,7 @@ pub(crate) fn register(ctx: &AppCtx) {
         logic.on_send_to_peer(move || {
             let Some(ui) = ctx.weak.upgrade() else { return };
             let Some(node) = ctx.node() else {
-                toast(&ui, "Still connecting — try again in a moment.", false);
+                toast(&ui, "Still connecting. Try again in a moment.", false);
                 return;
             };
             let state = ui.global::<State>();

@@ -141,7 +141,7 @@ async fn e2e_paired_transfer_flow() {
         ),
     )
     .await
-    .expect("download must not hang — this is the report: starts, no progress, files never arrive");
+    .expect("download must not hang, this is the report: starts, no progress, files never arrive");
 
     let _ = result.expect("download should succeed");
     let received = std::fs::read(recv_dir.join("app.txt")).expect("received file");

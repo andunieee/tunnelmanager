@@ -108,7 +108,7 @@ fn row_from_record(record: &TransferRecord) -> HistoryRow {
         speed: record
             .avg_speed_bps
             .map(format::fmt_speed)
-            .unwrap_or_else(|| "—".to_string())
+            .unwrap_or_else(|| "-".to_string())
             .into(),
         can_open: record.save_path.is_some() || record.text.is_some(),
         preview: record.text_preview.clone().unwrap_or_default().into(),
@@ -472,7 +472,7 @@ fn handle_main_event(ctx: &AppCtx, name: &str, payload: Option<&str>) {
                 if let Some(ui) = ctx.weak.upgrade() {
                     toast(
                         &ui,
-                        &format!("{sender} wants to pair — see “Add a peer”"),
+                        &format!("{sender} wants to pair. See “Add a peer”"),
                         false,
                     );
                 }
@@ -556,7 +556,7 @@ fn start_node(ctx: &AppCtx) {
                 let weak = ctx_bg.weak.clone();
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(ui) = weak.upgrade() {
-                        toast(&ui, "Connected — peering is live", false);
+                        toast(&ui, "Connected, peering is live", false);
                     }
                 });
             }
@@ -870,11 +870,11 @@ fn register_add_peer(ctx: &AppCtx) {
                     match node.request_nearby_pair(&id).await {
                         Ok(true) => (
                             true,
-                            "Pair request sent — waiting for them to accept".to_string(),
+                            "Pair request sent, waiting for them to accept".to_string(),
                         ),
                         Ok(false) => (
                             false,
-                            "Couldn't reach them — are you on the same network?".to_string(),
+                            "Couldn't reach them. Are you on the same network?".to_string(),
                         ),
                         Err(e) => (false, format!("Could not pair: {e}")),
                     }
@@ -926,7 +926,7 @@ fn register_add_peer(ctx: &AppCtx) {
                 return;
             }
             match copy_to_clipboard(&ticket) {
-                Ok(()) => toast(&ui, "Invite copied — share it with your peer", false),
+                Ok(()) => toast(&ui, "Invite copied. Share it with your peer", false),
                 Err(e) => toast(&ui, &format!("Copy failed: {e}"), true),
             }
         });
@@ -958,7 +958,7 @@ fn register_history(ctx: &AppCtx) {
                 if running {
                     platform::toast_later(
                         &ctx_bg.weak,
-                        "That transfer is still running — stop it first.",
+                        "That transfer is still running. Stop it first.",
                         true,
                     );
                     return;
@@ -1262,7 +1262,7 @@ fn register_settings(ctx: &AppCtx) {
                                 if fell_back {
                                     toast(
                                         &ui,
-                                        "Custom relay unreachable — using public relays",
+                                        "Custom relay unreachable, using public relays",
                                         true,
                                     );
                                 }
@@ -1437,7 +1437,7 @@ pub fn run() {
             state.set_peer_open(false);
             toast(
                 &ui,
-                &format!("{what} ready — pick a peer to send to"),
+                &format!("{what} ready. Pick a peer to send to"),
                 false,
             );
         });
@@ -1531,7 +1531,7 @@ mod tests {
         );
         assert_eq!(row.detail.as_str(), "3 items · /dl/peer · 1 renamed");
         assert_eq!(row.size.as_str(), "2.0 KB");
-        assert_eq!(row.speed.as_str(), "—");
+        assert_eq!(row.speed.as_str(), "-");
         assert!(row.can_open);
     }
 }

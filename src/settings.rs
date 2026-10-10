@@ -9,7 +9,7 @@ pub struct Settings {
     pub relay_mode: String,
     pub relay_urls: Vec<String>,
     pub relay_token: Option<String>,
-    /// "strict" | "public" — what to do when a custom relay is unreachable.
+    /// "strict" | "public", what to do when a custom relay is unreachable.
     pub relay_fallback: String,
     /// "default" | "custom"
     pub discovery_mode: String,

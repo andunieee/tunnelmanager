@@ -3,7 +3,7 @@ name = "flipflop"
 version = "0.0.2"
 edition = "2021"
 license = "AGPL-3.0-only"
-description = "Send files and text straight to your own trusted devices — desktop and Android, over LAN, Bluetooth or the internet"
+description = "Send files and text straight to your own trusted devices, desktop and Android, over LAN, Bluetooth or the internet"
 rust-version = "1.92"
 
 # The crate is a lib (cdylib) so it can be loaded as an Android native
@@ -137,7 +137,7 @@ name = "android.permission.ACCESS_NETWORK_STATE"
 name = "android.permission.WRITE_EXTERNAL_STORAGE"
 max_sdk_version = 28
 # Without this Android drops multicast to the app, so it can publish its own
-# mDNS records but never receives other devices' — LAN peers appear one-way.
+# mDNS records but never receives other devices', LAN peers appear one-way.
 [[package.metadata.android.uses_permission]]
 name = "android.permission.CHANGE_WIFI_MULTICAST_STATE"
 

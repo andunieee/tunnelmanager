@@ -105,7 +105,7 @@ pub async fn download_to_store(
             }
         };
         // `sizes` holds children only (entry 0 is the collection metadata), but
-        // the get stream counts the hash-seq root and that blob too — subtract
+        // the get stream counts the hash-seq root and that blob too, subtract
         // them to leave the same "file bytes" the sender reports.
         let root_bytes = (hash_seq.len() as u64).saturating_mul(32);
         let split = split_child_sizes(root_bytes, &sizes);

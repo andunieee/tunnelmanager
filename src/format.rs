@@ -16,7 +16,7 @@ pub fn fmt_bytes(bytes: u64) -> String {
 
 pub fn fmt_speed(bps: f64) -> String {
     if !bps.is_finite() || bps <= 0.0 {
-        return "—".to_string();
+        return "-".to_string();
     }
     format!("{}/s", fmt_bytes(bps as u64))
 }
@@ -35,7 +35,7 @@ pub fn fmt_date(ms: u64) -> String {
     }
 }
 
-/// `<bytes>:<total>:<speed x1000>` — the engine's shared progress payload shape.
+/// `<bytes>:<total>:<speed x1000>`, the engine's shared progress payload shape.
 pub fn parse_progress(payload: &str) -> Option<(u64, u64, f64)> {
     let mut parts = payload.splitn(3, ':');
     let bytes = parts.next()?.parse::<u64>().ok()?;
@@ -59,8 +59,8 @@ mod tests {
 
     #[test]
     fn speed_of_nothing_is_a_dash() {
-        assert_eq!(fmt_speed(0.0), "—");
-        assert_eq!(fmt_speed(f64::NAN), "—");
+        assert_eq!(fmt_speed(0.0), "-");
+        assert_eq!(fmt_speed(f64::NAN), "-");
         assert_eq!(fmt_speed(2048.0), "2.0 KB/s");
     }
 

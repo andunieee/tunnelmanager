@@ -352,7 +352,7 @@ impl PairedDeviceInfo {
 }
 
 /// Online/total counts across *actively* paired devices, for the tray summary.
-/// Peers that unpaired remotely — or whose local identity went stale — are
+/// Peers that unpaired remotely, or whose local identity went stale, are
 /// excluded from both counts: the tray must not advertise a device the user
 /// cannot actually reach.
 pub fn presence_summary(devices: &[PairedDeviceInfo]) -> (usize, usize) {

@@ -1,4 +1,4 @@
-//! # `engine` — stable public API for the app and integration tests
+//! # `engine`, stable public API for the app and integration tests
 //!
 //! ## Canonical imports
 //!

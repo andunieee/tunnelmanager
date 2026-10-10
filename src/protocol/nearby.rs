@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 /// Who may learn this device's human-readable identity over the local network.
 /// mDNS publishes our node id and addresses whenever it runs, so `PairedOnly`
-/// hides our name, not our presence — only `Off` stops the broadcast. `Off` is
+/// hides our name, not our presence, only `Off` stops the broadcast. `Off` is
 /// asymmetric: we can still discover and send to others, matching AirDrop.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -33,7 +33,7 @@ pub fn should_publish_mdns(setting: Discoverability) -> bool {
     !matches!(setting, Discoverability::Off)
 }
 
-/// Whether this device has presence worth keeping alive off screen — the gate
+/// Whether this device has presence worth keeping alive off screen, the gate
 /// for Android's foreground service. Wider than [`should_publish_mdns`]: paired
 /// presence rides the control connections, which keep running under `Off`.
 pub fn should_run_background_presence(paired_count: usize, setting: Discoverability) -> bool {
@@ -53,7 +53,7 @@ pub fn allows_unpaired_control(setting: Discoverability) -> bool {
 /// buggy or hostile.
 ///
 /// `InviteResponse` is allowed because a nearby accept/decline necessarily
-/// arrives over an unpaired connection — but the caller must still match it
+/// arrives over an unpaired connection, but the caller must still match it
 /// against an invite actually sent, or a stranger could spoof an acceptance.
 pub fn unpaired_message_allowed(msg: &ControlMessage) -> bool {
     matches!(

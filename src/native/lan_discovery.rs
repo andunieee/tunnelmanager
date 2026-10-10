@@ -1,7 +1,7 @@
 //! mDNS lifecycle. The only module in the engine that touches multicast.
 //!
 //! Everything downstream consumes `NearbyRegistry`, which takes injected
-//! observations — so the rest of the feature is testable without multicast.
+//! observations, so the rest of the feature is testable without multicast.
 
 use anyhow::Context;
 use iroh::Endpoint;
@@ -24,7 +24,7 @@ pub struct LanDiscovery {
 impl LanDiscovery {
     /// Registers the mDNS publisher on `endpoint` and pumps sightings into `tx`.
     ///
-    /// Failure is not fatal (no multicast, VPN, isolated guest network) — the
+    /// Failure is not fatal (no multicast, VPN, isolated guest network), the
     /// app keeps working with pairing codes and relays.
     pub fn start(endpoint: &Endpoint, tx: mpsc::UnboundedSender<LanEvent>) -> anyhow::Result<Self> {
         let mdns = MdnsAddressLookup::builder()
@@ -36,7 +36,7 @@ impl LanDiscovery {
             .context("endpoint has no address lookup registry")?
             .add(mdns.clone());
 
-        // Answers "is this device advertising at all?" — the first question in
+        // Answers "is this device advertising at all?", the first question in
         // every "the other device can't see me" report.
         tracing::debug!(
             target: "dashbeam::_events::nearby::mdns_advertising",

@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 /// Rows kept before the oldest are dropped.
 pub const MAX_RECORDS: usize = 500;
 
-/// File names stored per record — for showing what moved, not rebuilding a tree.
+/// File names stored per record, for showing what moved, not rebuilding a tree.
 pub const MAX_FILE_NAMES: usize = 20;
 
 /// Prefix `storage::create_recv_store` gives every partial-receive directory.
@@ -158,7 +158,7 @@ impl TransferRecord {
 }
 
 /// The BLAKE3 hash a partial-receive directory holds, if the path names one.
-/// Doubles as the name guard for deletion — `transfer-history.json` is
+/// Doubles as the name guard for deletion, `transfer-history.json` is
 /// user-writable, so a tampered path must not become an arbitrary-delete.
 pub fn partial_store_hash(path: &Path) -> Option<String> {
     let name = path.file_name()?.to_str()?;
@@ -261,7 +261,7 @@ impl TransferHistoryStore {
 
     /// Applies `f` to the row with `id` and persists the result.
     ///
-    /// `None` when no such row exists — a finalize after the row was trimmed or
+    /// `None` when no such row exists, a finalize after the row was trimmed or
     /// deleted is expected, not an error.
     pub fn update<F>(&self, id: &str, f: F) -> anyhow::Result<Option<TransferRecord>>
     where
@@ -290,7 +290,7 @@ impl TransferHistoryStore {
         Ok(Some(removed))
     }
 
-    /// Removes every row, returning them so callers can reclaim temp data —
+    /// Removes every row, returning them so callers can reclaim temp data , 
     /// the rows are the only pointers to those partial stores.
     pub fn clear(&self) -> anyhow::Result<Vec<TransferRecord>> {
         let _guard = self.lock_file();

@@ -41,7 +41,7 @@ pub fn split_child_sizes(root_bytes: u64, child_sizes: &[u64]) -> PayloadSizes {
     }
 }
 
-/// Sliding-window speed estimate fed with cumulative byte counts — a cumulative
+/// Sliding-window speed estimate fed with cumulative byte counts, a cumulative
 /// average never recovers from a slow start nor drops on a stall.
 pub struct SpeedMeter {
     window_secs: f64,
@@ -92,7 +92,7 @@ impl SpeedMeter {
 }
 
 /// Payload accounting for one get request. Only bytes the provider reported
-/// writing count — a blob never exceeds the highest offset seen for it.
+/// writing count, a blob never exceeds the highest offset seen for it.
 #[derive(Debug, Default)]
 pub struct RequestProgress {
     current_index: Option<u64>,
@@ -215,7 +215,7 @@ impl ShareProgress {
     }
 }
 
-/// Elapsed span in whole milliseconds, floored at 1 — 0 reads as "unknown".
+/// Elapsed span in whole milliseconds, floored at 1, 0 reads as "unknown".
 pub fn duration_ms(elapsed_secs: f64) -> u64 {
     if elapsed_secs <= 0.0 {
         return 0;
@@ -223,7 +223,7 @@ pub fn duration_ms(elapsed_secs: f64) -> u64 {
     ((elapsed_secs * 1000.0).round() as u64).max(1)
 }
 
-/// Wall time a share session spent serving requests — measured from the first
+/// Wall time a share session spent serving requests, measured from the first
 /// request, not the first payload byte, which for a small file is the last one.
 #[derive(Debug, Default)]
 pub struct TransferClock {

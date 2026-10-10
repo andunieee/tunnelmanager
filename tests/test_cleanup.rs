@@ -3,7 +3,7 @@ mod common;
 use common::{MockEventEmitter, TestFixture};
 use std::str::FromStr;
 
-/// Where the receiver keeps blobs for this ticket — the path comes from its hash.
+/// Where the receiver keeps blobs for this ticket, the path comes from its hash.
 fn receiver_temp_dir(ticket: &str) -> std::path::PathBuf {
     let parsed = iroh_blobs::ticket::BlobTicket::from_str(ticket).unwrap();
     flipflop::native::storage::temp_dir().join(format!(
@@ -134,7 +134,7 @@ async fn e2e_cancel_preserves_partial_store() {
     let expected_path = receiver_temp_dir(&ticket);
     let _ = std::fs::remove_dir_all(&expected_path); // start clean
 
-    // Send cancel immediately — the store is created before the select! runs,
+    // Send cancel immediately, the store is created before the select! runs,
     // so the partial dir will exist regardless of how fast the cancel fires.
     let (cancel_tx, cancel_rx) = tokio::sync::oneshot::channel::<()>();
     cancel_tx.send(()).unwrap();
@@ -273,7 +273,7 @@ async fn e2e_receiver_resumes_partial_download() {
         "some partial bytes should be saved (got {partial})"
     );
 
-    // Re-share the same content. The content hash — which keys the temp dir —
+    // Re-share the same content. The content hash, which keys the temp dir , 
     // is the same, so the retry targets the preserved partial store.
     let share2 = pair.share(vec![source], None)
         .await

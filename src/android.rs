@@ -213,7 +213,7 @@ mod imp {
     // ------------------------------------------------------ multicast lock
 
     /// Android drops inbound multicast without a `WifiManager.MulticastLock`.
-    /// mDNS publish (outbound) works regardless, but receive needs the lock —
+    /// mDNS publish (outbound) works regardless, but receive needs the lock , 
     /// without it a peer sees this device while this device never sees them,
     /// and a pair request the peer sends is never noticed. The `GlobalRef`
     /// keeps the lock object (and thus the held lock) alive for the process
@@ -265,7 +265,7 @@ mod imp {
             .l()
             .map_err(|e| e.to_string())?;
         // Reference-counted off: a single acquire holds until release, and the
-        // lock is never released here — it lives for the whole process.
+        // lock is never released here, it lives for the whole process.
         env.call_method(&lock, "setReferenceCounted", "(Z)V", &[JValue::Bool(0)])
             .map_err(|e| e.to_string())?;
         env.call_method(&lock, "acquire", "()V", &[])

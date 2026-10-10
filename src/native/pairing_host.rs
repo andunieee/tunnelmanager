@@ -1,7 +1,7 @@
 //! Pairing-code host and join flows.
 //!
 //! Split out of `node.rs` to keep that file navigable as local-network
-//! discovery lands. Behaviour is unchanged — this was a move, not a rewrite.
+//! discovery lands. Behaviour is unchanged, this was a move, not a rewrite.
 
 use std::str::FromStr;
 use std::sync::atomic::Ordering;
