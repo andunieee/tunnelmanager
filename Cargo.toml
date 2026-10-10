@@ -64,6 +64,7 @@ uuid = { version = "1", features = ["v4"] }
 slint = { version = "=1.16.1", features = ["backend-android-activity-06"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+qrcode = { version = "0.14.1", default-features = false }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # Pin to the same rustls iroh resolves so dyn ServerCertVerifier types unify.
@@ -91,6 +92,7 @@ open = "5"
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.21"
+rqrr = "0.11.0"
 
 [profile.release]
 panic = "abort"
@@ -166,6 +168,13 @@ name = "android.permission.ACCESS_COARSE_LOCATION"
 # Optional: devices without it simply run without the Bluetooth transport.
 [[package.metadata.android.uses_feature]]
 name = "android.hardware.bluetooth_le"
+required = false
+
+# Scanning a peer's QR code (QrCamera.java). Optional, like Bluetooth.
+[[package.metadata.android.uses_permission]]
+name = "android.permission.CAMERA"
+[[package.metadata.android.uses_feature]]
+name = "android.hardware.camera"
 required = false
 
 # A share made while the app runs arrives in a second activity instance,

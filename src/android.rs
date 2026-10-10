@@ -817,6 +817,111 @@ mod imp {
         }
     }
 
+    // ---------------------------------------------------------- QR camera
+
+    /// `com.flipflop.app.QrCamera`, loaded once from the embedded dex.
+    static QR_CAMERA: OnceLock<GlobalRef> = OnceLock::new();
+
+    type QrFrameHandler = Box<dyn Fn(Vec<u8>, u32, u32, u32) + Send + Sync>;
+    type QrStoppedHandler = Box<dyn Fn(bool) + Send + Sync>;
+    static QR_FRAME: OnceLock<QrFrameHandler> = OnceLock::new();
+    static QR_STOPPED: OnceLock<QrStoppedHandler> = OnceLock::new();
+
+    fn qr_camera_class(env: &mut JNIEnv) -> Result<&'static GlobalRef, String> {
+        helper_class(
+            env,
+            &QR_CAMERA,
+            "com.flipflop.app.QrCamera",
+            &[
+                NativeMethod {
+                    name: "onFrame".into(),
+                    sig: "([BIII)V".into(),
+                    fn_ptr: qr_on_frame as *mut std::ffi::c_void,
+                },
+                NativeMethod {
+                    name: "onStopped".into(),
+                    sig: "(Z)V".into(),
+                    fn_ptr: qr_on_stopped as *mut std::ffi::c_void,
+                },
+            ],
+        )
+    }
+
+    /// Register where camera frames go (`luma, width, height, rotation`, on
+    /// the camera thread) and who hears that the camera stopped on its own
+    /// (`denied`: no permission). Once per process.
+    pub fn on_qr_camera(
+        frame: impl Fn(Vec<u8>, u32, u32, u32) + Send + Sync + 'static,
+        stopped: impl Fn(bool) + Send + Sync + 'static,
+    ) {
+        let _ = QR_FRAME.set(Box::new(frame));
+        let _ = QR_STOPPED.set(Box::new(stopped));
+    }
+
+    /// Start streaming camera frames to the [`on_qr_camera`] handler.
+    pub fn start_qr_camera() {
+        let Some(app) = ANDROID_APP.get() else {
+            return;
+        };
+        app.run_on_java_main_thread(Box::new(|| {
+            let started = with_env(|env| {
+                let class = qr_camera_class(env)?;
+                env.call_static_method(
+                    class,
+                    "start",
+                    "(Landroid/app/Activity;)V",
+                    &[JValue::Object(&activity()?)],
+                )
+                .map(|_| ())
+                .map_err(|e| e.to_string())
+            });
+            if let Err(e) = started {
+                tracing::warn!("QR camera failed to start: {e}");
+                if let Some(stopped) = QR_STOPPED.get() {
+                    stopped(false);
+                }
+            }
+        }));
+    }
+
+    pub fn stop_qr_camera() {
+        let stopped = with_env(|env| {
+            let class = qr_camera_class(env)?;
+            env.call_static_method(class, "stop", "()V", &[])
+                .map(|_| ())
+                .map_err(|e| e.to_string())
+        });
+        if let Err(e) = stopped {
+            tracing::warn!("QR camera failed to stop: {e}");
+        }
+    }
+
+    /// `QrCamera.onFrame`, on the camera thread.
+    extern "system" fn qr_on_frame<'local>(
+        env: JNIEnv<'local>,
+        _class: JClass<'local>,
+        luma: JByteArray<'local>,
+        width: jni::sys::jint,
+        height: jni::sys::jint,
+        rotation: jni::sys::jint,
+    ) {
+        let (Some(handler), Ok(luma)) = (QR_FRAME.get(), env.convert_byte_array(&luma)) else {
+            return;
+        };
+        handler(luma, width.max(0) as u32, height.max(0) as u32, rotation.max(0) as u32);
+    }
+
+    /// `QrCamera.onStopped`, on the Java main thread.
+    extern "system" fn qr_on_stopped<'local>(
+        _env: JNIEnv<'local>,
+        _class: JClass<'local>,
+        denied: jni::sys::jboolean,
+    ) {
+        if let Some(stopped) = QR_STOPPED.get() {
+            stopped(denied != 0);
+        }
+    }
+
     /// Open the system file picker; picked files are staged into the outbox
     /// and reported to the [`on_shared`] handler (as [`Origin::Picker`]).
     pub fn pick_files() {
@@ -1505,6 +1610,12 @@ mod imp {
 
     /// Unused on desktop: iroh watches the network itself there.
     pub fn watch_network(_on_change: impl Fn() + Send + Sync + 'static) {}
+
+    /// No QR scanning on desktop.
+    pub fn start_qr_camera() {}
+
+    /// No QR scanning on desktop.
+    pub fn stop_qr_camera() {}
 }
 #[cfg(not(target_os = "android"))]
 pub use imp::*;

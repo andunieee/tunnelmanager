@@ -95,6 +95,12 @@ export global State {
     in-out property <string> pairing-status: "";
     in-out property <bool> pairing-error: false;
     in-out property <string> my-ticket: "";
+    // our address as a QR code (shown on demand)
+    in-out property <bool> show-qr: false;
+    in-out property <image> my-qr;
+    // camera viewfinder while scanning a peer's QR code (Android)
+    in-out property <bool> scanning: false;
+    in-out property <image> scan-frame;
 
     // peer page
     in-out property <string> selected-id: "";
@@ -182,6 +188,9 @@ export global Logic {
     callback accept-suggestion(string);
     callback decline-suggestion(string);
     callback copy-my-ticket();
+    callback toggle-my-qr();
+    callback scan-qr();
+    callback scan-cancel();
 
     // settings
     callback pick-downloads-dir();

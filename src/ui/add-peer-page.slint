@@ -87,6 +87,36 @@ export component AddPeerPage inherits Rectangle {
                 }
             }
 
+            // Camera viewfinder while scanning a peer's QR code.
+            if State.scanning: Card {
+                VerticalLayout {
+                    padding: Theme.card-padding;
+                    spacing: Theme.space-3;
+
+                    SectionHeader { label: "Scan a QR code"; icon: Icons.qr; }
+                    HintText { label: "Point the camera at the QR code on the other device."; }
+                    Rectangle {
+                        height: self.width;
+                        border-radius: Theme.radius;
+                        background: Theme.inset-bg;
+                        clip: true;
+                        Image {
+                            width: 100%;
+                            height: 100%;
+                            source: State.scan-frame;
+                            image-fit: cover;
+                        }
+                    }
+                    HorizontalLayout {
+                        alignment: end;
+                        GhostButton {
+                            label: "Cancel";
+                            clicked => { Logic.scan-cancel(); }
+                        }
+                    }
+                }
+            }
+
             // Nearby devices + inbound requests
             Card {
                 VerticalLayout {
@@ -133,6 +163,15 @@ export component AddPeerPage inherits Rectangle {
                             clicked => { Logic.pair-with-pasted(); }
                         }
                     }
+                    if State.touch && !State.scanning: HorizontalLayout {
+                        alignment: start;
+                        SecondaryButton {
+                            label: "Scan QR code";
+                            icon: Icons.qr;
+                            enabled: !State.pairing-busy;
+                            clicked => { Logic.scan-qr(); }
+                        }
+                    }
                 }
             }
 
@@ -171,6 +210,21 @@ export component AddPeerPage inherits Rectangle {
                             icon: Icons.copy;
                             enabled: State.my-ticket != "";
                             clicked => { Logic.copy-my-ticket(); }
+                        }
+                        SecondaryButton {
+                            label: State.show-qr ? "Hide QR" : "QR code";
+                            icon: Icons.qr;
+                            enabled: State.my-ticket != "";
+                            clicked => { Logic.toggle-my-qr(); }
+                        }
+                    }
+                    if State.show-qr: HorizontalLayout {
+                        alignment: center;
+                        Image {
+                            source: State.my-qr;
+                            width: min(240px, root.width - 2 * Theme.page-padding - 2 * Theme.card-padding);
+                            height: self.width;
+                            image-rendering: pixelated;
                         }
                     }
                 }

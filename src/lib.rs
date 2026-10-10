@@ -12,6 +12,7 @@ pub mod format;
 pub mod native;
 pub mod protocol;
 pub mod platform;
+pub mod qr;
 pub mod recorder;
 pub mod settings;
 pub mod transfers;

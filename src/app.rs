@@ -228,7 +228,14 @@ pub(crate) fn refresh_peers(ctx: &AppCtx) {
             state.set_my_name(my_name.into());
             state.set_node_ready(ready);
             match ticket {
-                Ok(ticket) => state.set_my_ticket(ticket.into()),
+                Ok(ticket) => {
+                    if state.get_show_qr() && state.get_my_ticket() != ticket.as_str() {
+                        if let Some(buf) = crate::qr::render(&ticket) {
+                            state.set_my_qr(slint::Image::from_rgb8(buf));
+                        }
+                    }
+                    state.set_my_ticket(ticket.into());
+                }
                 Err(e) => tracing::debug!("pairing_ticket unavailable: {e}"),
             }
             if selection_changed {
@@ -1360,6 +1367,11 @@ fn register_settings(ctx: &AppCtx) {
         let ctx = ctx.clone();
         logic.on_page_changed(move |page: SharedString| {
             let page = page.to_string();
+            if page != "add-peer" {
+                if let Some(ui) = ctx.weak.upgrade() {
+                    crate::qr::stop_scan(&ui);
+                }
+            }
             if page == "peer" {
                 refresh_peers(&ctx);
                 refresh_suggestions(&ctx);
@@ -1469,6 +1481,7 @@ pub fn run() {
     register_add_peer(&ctx);
     register_history(&ctx);
     register_settings(&ctx);
+    crate::qr::register(&ctx);
     transfers::register(&ctx);
 
     ui.run().expect("UI error");
