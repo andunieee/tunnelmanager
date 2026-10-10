@@ -106,7 +106,7 @@ export component SettingsPage inherits Rectangle {
                     icon: Icons.folder;
 
                     // The folder picker is desktop-only; on Android received
-                    // files land in the app-private downloads folder.
+                    // files land in Download/flipflop/<peer>/.
                     if !State.touch: Field {
                         label: "Save to";
                         HorizontalLayout {

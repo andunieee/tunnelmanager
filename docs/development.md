@@ -77,8 +77,9 @@ Platform integration (see `src/android.rs`):
   system-bar colors come from `android/res`; the PNGs there are generated
   from the SVGs in `android/icon` by `android/gen-res.sh`. The UI pads itself
   by the window's safe-area insets, since it is drawn edge-to-edge.
-- **Receiving** land in the app-private downloads folder; opening rows is a
-  no-op on Android (use a file manager). The Settings page hides the folder
+- **Received files** land in `Download/flipflop/<peer>/` (public storage;
+  Android 8/9 ask for the storage permission first, Android 10 falls back to
+  the app-private downloads folder). The Settings page hides the folder
   picker accordingly.
 - **Data dir** is `/data/data/com.flipflop.app/files`. The package id changed
   with the rename (was `dev.tunnelmanager.slint`), so Android installs it as a

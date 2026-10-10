@@ -109,8 +109,36 @@ mod imp {
         }));
     }
 
-    /// Default location for received files.
+    /// Default location for received files: the public Downloads folder, or
+    /// the app-private one where Android won't let us write there (see
+    /// `Storage.downloadsDir`).
     pub fn downloads_dir() -> PathBuf {
+        let public = with_env(|env| {
+            let class = storage_class(env)?;
+            let dir = env
+                .call_static_method(
+                    class,
+                    "downloadsDir",
+                    "(Landroid/app/Activity;)Ljava/lang/String;",
+                    &[JValue::Object(&activity()?)],
+                )
+                .map_err(|e| e.to_string())?
+                .l()
+                .map_err(|e| e.to_string())?;
+            if dir.is_null() {
+                return Ok(None);
+            }
+            let dir: String = env
+                .get_string(&JString::from(dir))
+                .map_err(|e| e.to_string())?
+                .into();
+            Ok(Some(PathBuf::from(dir)))
+        });
+        match public {
+            Ok(Some(dir)) => return dir,
+            Ok(None) => {}
+            Err(e) => tracing::warn!("public downloads dir unavailable: {e}"),
+        }
         data_dir().join("downloads")
     }
 
@@ -708,6 +736,85 @@ mod imp {
                 fn_ptr: on_picked as *mut std::ffi::c_void,
             }],
         )
+    }
+
+    // ------------------------------------------------------------ storage
+
+    /// `com.flipflop.app.Storage`, loaded once from the embedded dex.
+    static STORAGE: OnceLock<GlobalRef> = OnceLock::new();
+
+    fn storage_class(env: &mut JNIEnv) -> Result<&'static GlobalRef, String> {
+        helper_class(env, &STORAGE, "com.flipflop.app.Storage", &[])
+    }
+
+    /// Open a received file in the app the user picks.
+    pub fn open_file(path: &Path) {
+        let path = path.to_string_lossy().into_owned();
+        let opened = with_env(|env| {
+            let class = storage_class(env)?;
+            let path = env.new_string(path).map_err(|e| e.to_string())?;
+            env.call_static_method(
+                class,
+                "open",
+                "(Landroid/app/Activity;Ljava/lang/String;)V",
+                &[JValue::Object(&activity()?), JValue::Object(&path)],
+            )
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+        });
+        if let Err(e) = opened {
+            tracing::warn!("open file failed: {e}");
+            show_toast("Could not open the file", true);
+        }
+    }
+
+    /// Offer files to other apps through the share sheet.
+    pub fn share_files(paths: &[PathBuf]) {
+        let shared = with_env(|env| {
+            let class = storage_class(env)?;
+            let array = env
+                .new_object_array(paths.len() as i32, "java/lang/String", JObject::null())
+                .map_err(|e| e.to_string())?;
+            for (i, path) in paths.iter().enumerate() {
+                let path = env
+                    .new_string(path.to_string_lossy())
+                    .map_err(|e| e.to_string())?;
+                env.set_object_array_element(&array, i as i32, path)
+                    .map_err(|e| e.to_string())?;
+            }
+            env.call_static_method(
+                class,
+                "share",
+                "(Landroid/app/Activity;[Ljava/lang/String;)V",
+                &[JValue::Object(&activity()?), JValue::Object(&array)],
+            )
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+        });
+        if let Err(e) = shared {
+            tracing::warn!("share files failed: {e}");
+            show_toast("Could not share the files", true);
+        }
+    }
+
+    /// Offer plain text to other apps through the share sheet.
+    pub fn share_text(text: &str) {
+        let shared = with_env(|env| {
+            let class = storage_class(env)?;
+            let text = env.new_string(text).map_err(|e| e.to_string())?;
+            env.call_static_method(
+                class,
+                "shareText",
+                "(Landroid/app/Activity;Ljava/lang/String;)V",
+                &[JValue::Object(&activity()?), JValue::Object(&text)],
+            )
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+        });
+        if let Err(e) = shared {
+            tracing::warn!("share text failed: {e}");
+            show_toast("Could not share the text", true);
+        }
     }
 
     /// Open the system file picker; picked files are staged into the outbox

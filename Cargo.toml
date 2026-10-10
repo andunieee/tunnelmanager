@@ -131,6 +131,11 @@ config_changes = "orientation|keyboardHidden|screenSize"
 name = "android.permission.INTERNET"
 [[package.metadata.android.uses_permission]]
 name = "android.permission.ACCESS_NETWORK_STATE"
+# Received files go to the public Downloads folder; Android 8/9 need this
+# for that (11+ needs nothing, 10 falls back to app-private storage).
+[[package.metadata.android.uses_permission]]
+name = "android.permission.WRITE_EXTERNAL_STORAGE"
+max_sdk_version = 28
 # Without this Android drops multicast to the app, so it can publish its own
 # mDNS records but never receives other devices' — LAN peers appear one-way.
 [[package.metadata.android.uses_permission]]

@@ -121,6 +121,11 @@ impl Settings {
     /// The folder the user picked (or the system Downloads dir). This is what
     /// the settings page shows and saves back into `downloads_dir`.
     pub fn downloads_base(&self) -> Option<std::path::PathBuf> {
+        // Android has no folder picker: earlier versions saved the shown
+        // app-private default here, which must not pin it.
+        #[cfg(target_os = "android")]
+        return default_downloads_dir();
+        #[cfg(not(target_os = "android"))]
         self.downloads_dir
             .as_deref()
             .map(str::trim)
@@ -140,8 +145,6 @@ impl Settings {
 
 #[cfg(target_os = "android")]
 fn default_downloads_dir() -> Option<std::path::PathBuf> {
-    // No system Downloads access without SAF plumbing; keep received files
-    // in the app-private downloads folder instead.
     Some(crate::android::downloads_dir())
 }
 
