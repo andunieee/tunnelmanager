@@ -424,11 +424,26 @@ fn handle_main_event(ctx: &AppCtx, name: &str, payload: Option<&str>) {
                 .and_then(|v| v.get("display_name"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("a peer");
+            let id = parsed
+                .as_ref()
+                .and_then(|v| v.get("endpoint_id"))
+                .and_then(|v| v.as_str())
+                .map(str::to_lowercase);
             if let Some(ui) = ctx.weak.upgrade() {
                 toast(&ui, &format!("Paired with {who}"), false);
+                // Open the new peer's page; the refresh below fills in its
+                // details and keeps it selected.
+                if let Some(id) = id {
+                    let state = ui.global::<State>();
+                    state.set_rename_mode(false);
+                    state.set_selected_id(id.into());
+                    state.set_page("peer".into());
+                    state.set_peer_open(true);
+                }
             }
             refresh_peers(ctx);
             refresh_suggestions(ctx);
+            refresh_history(ctx);
         }
         "device-unpaired" => {
             refresh_peers(ctx);

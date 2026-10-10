@@ -373,7 +373,7 @@ impl ControlProtocol {
                     self.allow_peer(remote).await;
                     self.ctx.paired_connections.refresh().await;
 
-                    crate::native::pairing_util::emit_device_paired(&self.ctx.app_handle, display_name);
+                    crate::native::pairing_util::emit_device_paired(&self.ctx.app_handle, &endpoint_id, display_name);
                 }
                 pairing_completed = true;
                 break;
@@ -760,7 +760,7 @@ impl ControlProtocol {
             .flatten()
             .map(|d| d.display_name)
             .unwrap_or_default();
-        crate::native::pairing_util::emit_device_paired(&self.ctx.app_handle, &display_name);
+        crate::native::pairing_util::emit_device_paired(&self.ctx.app_handle, &endpoint_id, &display_name);
     }
 
     async fn is_allowed(&self, remote: &EndpointId) -> bool {
@@ -1627,7 +1627,7 @@ impl NodeService {
         self.nearby.lock().await.expire(endpoint_id);
         self.access.write().await.allowed.insert(endpoint_id.parse()?);
 
-        crate::native::pairing_util::emit_device_paired(&self.app_handle, &display_name);
+        crate::native::pairing_util::emit_device_paired(&self.app_handle, &endpoint_id, &display_name);
 
         // The pairing above is already durable, so notifying a sender that may
         // have gone away must not report the accept as failed. No cached

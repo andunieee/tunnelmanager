@@ -165,7 +165,7 @@ impl NodeService {
         self.access.write().await.allowed.insert(peer_id);
         self.paired_connections.refresh().await;
 
-        crate::native::pairing_util::emit_device_paired(&self.app_handle, &display_name);
+        crate::native::pairing_util::emit_device_paired(&self.app_handle, &endpoint_id, &display_name);
 
         Ok(())
     }
