@@ -2,7 +2,7 @@ import { LineEdit, TextEdit, ComboBox, CheckBox } from "std-widgets.slint";
 import { State, Logic } from "globals.slint";
 import {
     Theme, Card, PageTitle, HintText, StatusText, FieldLabel, Divider,
-    SectionHeader, Icons, PrimaryButton, SecondaryButton, ScrollView,
+    SectionHeader, Icons, PrimaryButton, SecondaryButton, GhostButton, ScrollView,
 } from "components.slint";
 
 // Label + control stacked, with an optional hint underneath.
@@ -54,18 +54,49 @@ export component SettingsPage inherits Rectangle {
                     title: "This device";
                     icon: Icons.device;
 
-                    HorizontalLayout {
+                    if !State.name-editing: HorizontalLayout {
                         spacing: Theme.space-2;
-                        LineEdit {
+                        Text {
+                            text: State.my-name;
+                            color: Theme.text;
+                            font-size: Theme.font-sm;
+                            overflow: elide;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                        }
+                        GhostButton {
+                            label: "Edit";
+                            icon: Icons.edit;
+                            clicked => {
+                                State.name-input = State.my-name;
+                                State.name-editing = true;
+                            }
+                        }
+                    }
+                    if State.name-editing: HorizontalLayout {
+                        spacing: Theme.space-2;
+                        name-field := LineEdit {
                             text <=> State.name-input;
                             placeholder-text: "Device name";
                             horizontal-stretch: 1;
+                            init => { self.focus(); }
                             accepted => { Logic.rename-self-name(); }
                         }
-                        SecondaryButton {
-                            label: "Save name";
-                            enabled: State.name-input != "" && State.name-input != State.my-name;
-                            clicked => { Logic.rename-self-name(); }
+                        PrimaryButton {
+                            label: "Save";
+                            clicked => {
+                                // Losing focus commits the keyboard's composing
+                                // text on Android; `name-input` lacks it until then.
+                                name-field.clear-focus();
+                                Logic.rename-self-name();
+                            }
+                        }
+                        GhostButton {
+                            label: "Cancel";
+                            clicked => {
+                                name-field.clear-focus();
+                                State.name-editing = false;
+                            }
                         }
                     }
                 }

@@ -1051,6 +1051,7 @@ fn register_settings(ctx: &AppCtx) {
                                 let state = ui.global::<State>();
                                 state.set_my_name(info.display_name.clone().into());
                                 state.set_name_input(info.display_name.into());
+                                state.set_name_editing(false);
                                 toast(&ui, "Device name saved", false);
                             }
                         });
@@ -1306,8 +1307,7 @@ fn register_settings(ctx: &AppCtx) {
                 refresh_peers(&ctx);
             } else if page == "settings" {
                 if let Some(ui) = ctx.weak.upgrade() {
-                    let state = ui.global::<State>();
-                    state.set_name_input(state.get_my_name());
+                    ui.global::<State>().set_name_editing(false);
                 }
             }
         });

@@ -207,13 +207,20 @@ component TransferCard inherits Card {
 // Inline rename field (shown while `State.rename-mode`).
 component RenameRow inherits HorizontalLayout {
     spacing: Theme.space-2;
-    LineEdit {
+    name-field := LineEdit {
         text <=> State.rename-input;
         placeholder-text: "Peer name";
         horizontal-stretch: 1;
         accepted => { Logic.rename-peer-confirm(); }
     }
-    PrimaryButton { label: "Save"; clicked => { Logic.rename-peer-confirm(); } }
+    PrimaryButton {
+        label: "Save";
+        clicked => {
+            // Losing focus commits the keyboard's composing text on Android.
+            name-field.clear-focus();
+            Logic.rename-peer-confirm();
+        }
+    }
     GhostButton { label: "Cancel"; clicked => { Logic.rename-peer-cancel(); } }
 }
 

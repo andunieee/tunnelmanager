@@ -116,7 +116,8 @@ export global State {
     in-out property <string> paste-input: "";
 
     // settings page
-    // device-name field (kept apart from my-name so refreshes don't clobber typing)
+    // device-name editor (kept apart from my-name so refreshes don't clobber typing)
+    in-out property <bool> name-editing: false;
     in-out property <string> name-input: "";
     in-out property <string> downloads-dir: "";
     in-out property <int> relay-mode: 0; // 0 default, 1 disabled, 2 custom
