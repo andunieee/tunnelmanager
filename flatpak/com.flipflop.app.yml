@@ -1,0 +1,51 @@
+# Flatpak build of the desktop app.
+#
+# Build locally with:
+#   flatpak-builder --user --install --force-clean build-dir flatpak/com.flipflop.app.yml
+#
+# The build fetches crates over the network (build-args below), which is fine
+# for our own bundles but not accepted by Flathub; that would need a vendored
+# cargo-sources.json from flatpak-cargo-generator instead.
+id: com.flipflop.app
+runtime: org.freedesktop.Platform
+runtime-version: "25.08"
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: flipflop
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  # Also X11 (not just fallback): arboard's clipboard only speaks X11.
+  - --socket=x11
+  - --device=dri
+  # Received files land in ~/Downloads by default.
+  - --filesystem=xdg-download
+  # Identity key lives in the Secret Service keyring.
+  - --talk-name=org.freedesktop.secrets
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  build-args:
+    - --share=network
+  env:
+    CARGO_HOME: /run/build/flipflop/cargo
+modules:
+  - name: flipflop
+    buildsystem: simple
+    build-commands:
+      # rust-toolchain.toml pins a rustup channel; the SDK's rust has no rustup.
+      - rm -f rust-toolchain.toml
+      - cargo build --release --bin flipflop
+      - install -Dm755 target/release/flipflop -t /app/bin
+      - install -Dm644 src/ui/icons/logo.svg /app/share/icons/hicolor/scalable/apps/com.flipflop.app.svg
+      - install -Dm644 flatpak/com.flipflop.app.desktop -t /app/share/applications
+      - install -Dm644 flatpak/com.flipflop.app.metainfo.xml -t /app/share/metainfo
+    sources:
+      - type: dir
+        path: ..
+        skip:
+          - .git
+          - target
+          - build-dir
+          - .flatpak-builder

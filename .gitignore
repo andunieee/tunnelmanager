@@ -19,3 +19,8 @@ Thumbs.db
 # Logs
 *.log
 *.jks
+
+# Flatpak builds
+build-dir/
+.flatpak-builder/
+*.flatpak

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=flipflop
+Comment=Send files and text straight to your own trusted devices
+Exec=flipflop
+Icon=com.flipflop.app
+Terminal=false
+Categories=Network;FileTransfer;
+Keywords=share;send;transfer;files;

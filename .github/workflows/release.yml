@@ -182,8 +182,42 @@ jobs:
           name: desktop-${{ matrix.target }}
           path: dist/*
 
+  flatpak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        id: version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          if [[ ! "$tag" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Tag must look like v1.2.3, got '$GITHUB_REF_NAME'"
+            exit 1
+          fi
+          echo "name=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp Cargo version
+        shell: bash
+        run: |
+          sed -i.bak 's/^version = "[^"]*"$/version = "${{ steps.version.outputs.name }}"/' Cargo.toml
+          rm -f Cargo.toml.bak
+          grep -q "^version = \"${{ steps.version.outputs.name }}\"$" Cargo.toml
+
+      # Uploads the bundle as an artifact itself, which the release job picks up.
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: flatpak/com.flipflop.app.yml
+          bundle: flipflop-${{ steps.version.outputs.name }}-linux-x86_64.flatpak
+          cache-key: flatpak-builder-${{ github.sha }}
+
   release:
-    needs: [android, desktop]
+    needs: [android, desktop, flatpak]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
