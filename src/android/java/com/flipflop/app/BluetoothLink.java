@@ -20,11 +20,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelUuid;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -281,6 +283,16 @@ public final class BluetoothLink {
             Log.w(TAG, "this device cannot scan");
             return;
         }
+        // Without "neverForLocation" (see neededPermissions) Android delivers
+        // no scan results while Location is switched off, and says nothing.
+        if (!locationEnabled()) {
+            Log.w(TAG, "location is off: scans will find nothing");
+            main.post(() -> Toast.makeText(
+                            context,
+                            "Turn on Location to find nearby devices over Bluetooth",
+                            Toast.LENGTH_LONG)
+                    .show());
+        }
         // Screen-off scans are only delivered with a filter.
         ScanFilter filter = new ScanFilter.Builder().setServiceData(SERVICE, new byte[0]).build();
         ScanSettings settings =
@@ -309,6 +321,11 @@ public final class BluetoothLink {
         } catch (RuntimeException e) {
             Log.w(TAG, "cannot scan", e);
         }
+    }
+
+    private static boolean locationEnabled() {
+        LocationManager location = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        return location == null || location.isLocationEnabled();
     }
 
     private static void sighted(ScanResult result) {
