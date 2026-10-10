@@ -110,7 +110,7 @@ fn row_from_record(record: &TransferRecord) -> HistoryRow {
             .map(format::fmt_speed)
             .unwrap_or_else(|| "—".to_string())
             .into(),
-        can_open: record.save_path.is_some(),
+        can_open: record.save_path.is_some() || record.text.is_some(),
         preview: record.text_preview.clone().unwrap_or_default().into(),
     }
 }
@@ -981,23 +981,70 @@ fn register_history(ctx: &AppCtx) {
         });
     }
     {
+        // Tap a row: open what it received; pasted text is shared (Android)
+        // or copied (desktop).
         let ctx = ctx.clone();
         logic.on_open_row(move |id: SharedString| {
             let ctx_bg = ctx.clone();
-            ctx.rt.spawn_blocking(move || {
-                let id = id.to_string();
-                let target = ctx_bg.history.list().ok().and_then(|records| {
-                    records
-                        .iter()
-                        .find(|r| r.id == id)
-                        .and_then(|r| r.save_path.clone())
-                });
-                if let Some(target) = target {
-                    open_path(&target);
+            ctx.rt.spawn_blocking(move || match row_target(&ctx_bg, &id) {
+                Some(RowTarget::Text(text)) => {
+                    #[cfg(target_os = "android")]
+                    platform::share_text(&text);
+                    #[cfg(not(target_os = "android"))]
+                    let _ = ctx_bg.weak.upgrade_in_event_loop(move |ui| {
+                        match copy_to_clipboard(&text) {
+                            Ok(()) => toast(&ui, "Text copied", false),
+                            Err(e) => toast(&ui, &format!("Could not copy: {e}"), true),
+                        }
+                    });
                 }
+                Some(RowTarget::Path(path)) => open_path(&path.to_string_lossy()),
+                None => platform::toast_later(&ctx_bg.weak, "The files are gone", true),
             });
         });
     }
+    {
+        // Android: hand a row's files or text to another app.
+        let ctx = ctx.clone();
+        logic.on_share_row(move |id: SharedString| {
+            let ctx_bg = ctx.clone();
+            ctx.rt.spawn_blocking(move || match row_target(&ctx_bg, &id) {
+                #[cfg(target_os = "android")]
+                Some(RowTarget::Text(text)) => platform::share_text(&text),
+                #[cfg(target_os = "android")]
+                Some(RowTarget::Path(path)) => platform::share_path(&path),
+                #[cfg(not(target_os = "android"))]
+                Some(_) => {}
+                None => platform::toast_later(&ctx_bg.weak, "The files are gone", true),
+            });
+        });
+    }
+}
+
+/// What tapping a history row acts on.
+enum RowTarget {
+    Text(String),
+    Path(PathBuf),
+}
+
+/// The pasted text of a row, else the received file or folder (falling back
+/// to the folder it was saved into) while it still exists.
+fn row_target(ctx: &AppCtx, id: &str) -> Option<RowTarget> {
+    let records = ctx.history.list().ok()?;
+    let record = records.iter().find(|r| r.id == id)?;
+    if let Some(text) = &record.text {
+        return Some(RowTarget::Text(text.clone()));
+    }
+    let dir = PathBuf::from(record.save_path.as_deref()?);
+    let name = if record.root_name.is_empty() {
+        record.file_names.first()
+    } else {
+        Some(&record.root_name)
+    };
+    name.map(|name| dir.join(name))
+        .filter(|path| path.exists())
+        .or_else(|| dir.is_dir().then_some(dir))
+        .map(RowTarget::Path)
 }
 
 fn register_settings(ctx: &AppCtx) {

@@ -12,7 +12,14 @@ component HistoryItem inherits Rectangle {
     border-radius: Theme.radius;
     background: ta.has-hover ? Theme.card-bg-hover : Theme.card-bg;
     animate background { duration: 90ms; }
-    ta := TouchArea { }
+    ta := TouchArea {
+        mouse-cursor: root.entry.can-open ? pointer : default;
+        clicked => {
+            if root.entry.can-open {
+                Logic.open-row(root.entry.id);
+            }
+        }
+    }
 
     HorizontalLayout {
         padding: Theme.space-3;
@@ -68,9 +75,16 @@ component HistoryItem inherits Rectangle {
 
         // Fixed-width action column keeps badges aligned across rows.
         HorizontalLayout {
-            width: State.touch ? Theme.control-height : 112px;
+            width: State.touch ? 2 * Theme.control-height : 112px;
             alignment: end;
             spacing: Theme.space-1;
+            if root.entry.can-open && State.touch: VerticalLayout {
+                alignment: center;
+                IconButton {
+                    icon: Icons.share;
+                    clicked => { Logic.share-row(root.entry.id); }
+                }
+            }
             if root.entry.can-open && !State.touch: VerticalLayout {
                 alignment: center;
                 GhostButton {

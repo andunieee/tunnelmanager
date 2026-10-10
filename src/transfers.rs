@@ -394,15 +394,15 @@ pub(crate) fn text_preview(text: &str) -> String {
     }
 }
 
-/// The excerpt of a paste being sent, if `paths` is one.
-fn sent_paste_preview(paths: &[PathBuf]) -> Option<String> {
+/// The text of a paste being sent, if `paths` is one.
+fn sent_paste_text(paths: &[PathBuf]) -> Option<String> {
     let [path] = paths else { return None };
     if path_name(path) != PASTE_FILE_NAME
         || std::fs::metadata(path).ok()?.len() > PASTE_MAX_BYTES
     {
         return None;
     }
-    std::fs::read_to_string(path).ok().map(|text| text_preview(&text))
+    std::fs::read_to_string(path).ok()
 }
 
 /// Write `text` to a fresh private dir as the paste file; returns (dir, file).
@@ -469,8 +469,8 @@ fn start_send(
         // Walking folders for their size can take a while: keep it off the
         // async workers.
         let scan = paths.clone();
-        let (metadata, path_type, preview) = match tokio::task::spawn_blocking(move || {
-            (metadata_for(&scan), path_type_of(&scan), sent_paste_preview(&scan))
+        let (metadata, path_type, pasted) = match tokio::task::spawn_blocking(move || {
+            (metadata_for(&scan), path_type_of(&scan), sent_paste_text(&scan))
         })
         .await
         {
@@ -496,7 +496,7 @@ fn start_send(
                     display_name: Some(peer_name.clone()),
                     device_type: None,
                 }),
-                text_preview: preview,
+                text: pasted,
                 ..Ctx::default()
             },
             history_enabled,
@@ -902,7 +902,7 @@ pub(crate) fn accept_invite(ctx: &AppCtx, payload: serde_json::Value) {
                 // Pasted text: show it (the file stays saved too).
                 let pasted = received.lock().unwrap().pasted_text(&save_dir);
                 if let Some(text) = &pasted {
-                    recorder.set_text_preview(text_preview(text));
+                    recorder.set_text(text.clone());
                 }
                 let _ = weak.upgrade_in_event_loop(move |ui| {
                     update_row(&ui, &key, |row| {

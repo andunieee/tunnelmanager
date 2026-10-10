@@ -114,6 +114,9 @@ pub struct TransferRecord {
     /// Pasted text only: a one-line excerpt for the history list.
     #[serde(default)]
     pub text_preview: Option<String>,
+    /// Pasted text only: the whole text, so the row can share or copy it.
+    #[serde(default)]
+    pub text: Option<String>,
 }
 
 impl TransferRecord {
@@ -143,6 +146,7 @@ impl TransferRecord {
             resumable_store_path: None,
             error: None,
             text_preview: None,
+            text: None,
         }
     }
 

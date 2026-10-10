@@ -147,11 +147,38 @@ pub fn open_url(url: &str) {
     }
 }
 
-/// Hand a saved file back to the OS (file manager / viewer).
+/// Hand a saved file back to the OS (viewer app). Android can't open a
+/// folder, so a folder's files go to the share sheet instead.
 #[cfg(target_os = "android")]
-pub fn open_path(_path: &str) {
-    // No-op: surfacing received files is done through the system
-    // Downloads/Files app on Android.
+pub fn open_path(path: &str) {
+    let path = std::path::Path::new(path);
+    if path.is_dir() {
+        share_path(path);
+    } else {
+        android::open_file(path);
+    }
+}
+
+/// Offer a file, or every file in a folder, to other apps (share sheet).
+#[cfg(target_os = "android")]
+pub fn share_path(path: &std::path::Path) {
+    let files: Vec<PathBuf> = walkdir::WalkDir::new(path)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_file())
+        .map(|entry| entry.into_path())
+        .collect();
+    if files.is_empty() {
+        android::show_toast("Nothing to share", true);
+    } else {
+        android::share_files(&files);
+    }
+}
+
+/// Offer text to other apps (share sheet).
+#[cfg(target_os = "android")]
+pub fn share_text(text: &str) {
+    android::share_text(text)
 }
 
 /// Hand a saved file back to the OS (file manager / viewer).
