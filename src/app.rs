@@ -7,10 +7,11 @@ use crate::{AppWindow, HistoryRow, Logic, PeerRow, State};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel, Weak};
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::engine::{
-    get_relay_status, is_reclaimable_partial, reclaim_partial, resolve_relay_mode_with_fallback,
+    is_reclaimable_partial, reclaim_partial, resolve_relay_mode_with_fallback,
     verify_discovery, verify_relays, AppHandle, NodeService, PairedDeviceInfo, TransferDirection,
     TransferHistoryStore, TransferRecord, TransferStatus,
 };
@@ -1069,6 +1070,185 @@ fn row_target(ctx: &AppCtx, id: &str) -> Option<RowTarget> {
         .map(RowTarget::Path)
 }
 
+/// How long typing in a settings text field must pause before it is saved.
+const SETTINGS_EDIT_DELAY: std::time::Duration = std::time::Duration::from_millis(700);
+
+/// Bumped per test run so a slow, stale result can't overwrite a newer one.
+static RELAY_TEST_RUN: AtomicU64 = AtomicU64::new(0);
+static DISCOVERY_TEST_RUN: AtomicU64 = AtomicU64::new(0);
+
+/// Apply the settings page's fields: persist them, reconfigure the node where
+/// relay, discovery or visibility changed, and re-test changed connections.
+fn save_settings(ctx: &AppCtx) {
+    let Some(ui) = ctx.weak.upgrade() else {
+        return;
+    };
+    let new = settings_from_state(&ui.global::<State>());
+    let old = std::mem::replace(&mut *ctx.settings.lock().unwrap(), new.clone());
+    if old == new {
+        return;
+    }
+    let relay_changed = (
+        &old.relay_mode,
+        &old.relay_urls,
+        &old.relay_token,
+        &old.relay_fallback,
+    ) != (
+        &new.relay_mode,
+        &new.relay_urls,
+        &new.relay_token,
+        &new.relay_fallback,
+    );
+    let discovery_changed = (
+        &old.discovery_mode,
+        &old.discovery_pkarr_relay_url,
+        &old.discovery_dns_origin,
+    ) != (
+        &new.discovery_mode,
+        &new.discovery_pkarr_relay_url,
+        &new.discovery_dns_origin,
+    );
+    let visibility_changed = old.discoverability != new.discoverability;
+
+    let path = ctx.settings_path.clone();
+    let shared = ctx.settings.clone();
+    let weak = ctx.weak.clone();
+    ctx.rt.spawn_blocking(move || {
+        // Write whatever is current, so overlapping saves can't leave an
+        // older copy on disk.
+        static WRITE: Mutex<()> = Mutex::new(());
+        let _guard = WRITE.lock().unwrap();
+        let current = shared.lock().unwrap().clone();
+        let result = current.save(&path);
+        let _ = slint::invoke_from_event_loop(move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let state = ui.global::<State>();
+            match result {
+                Ok(()) => state.set_settings_status("".into()),
+                Err(e) => {
+                    let msg = format!("Could not save settings: {e}");
+                    state.set_settings_status(msg.clone().into());
+                    toast(&ui, &msg, true);
+                }
+            }
+        });
+    });
+
+    if relay_changed || discovery_changed || visibility_changed {
+        if let Some(node) = ctx.node() {
+            let shared = ctx.settings.clone();
+            let network_changed = relay_changed || discovery_changed;
+            ctx.rt.spawn(async move {
+                // One change at a time, each applying the latest settings.
+                static APPLY: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+                let _guard = APPLY.lock().await;
+                let cfg = shared.lock().unwrap().clone();
+                if network_changed {
+                    if let Err(e) = node
+                        .reconfigure_network(cfg.relay_mode().into(), cfg.discovery_mode())
+                        .await
+                    {
+                        tracing::warn!("reconfigure failed: {e}");
+                    }
+                }
+                if visibility_changed {
+                    if let Err(e) = node.set_discoverability(cfg.discoverability()).await {
+                        tracing::warn!("discoverability change failed: {e}");
+                    }
+                }
+            });
+        }
+    }
+
+    if relay_changed {
+        test_relay(ctx);
+    }
+    if discovery_changed {
+        test_discovery(ctx);
+    }
+}
+
+/// Check the relay settings shown on the settings page can reach a relay.
+fn test_relay(ctx: &AppCtx) {
+    let Some(ui) = ctx.weak.upgrade() else {
+        return;
+    };
+    let state = ui.global::<State>();
+    let run = RELAY_TEST_RUN.fetch_add(1, Ordering::Relaxed) + 1;
+    let settings = settings_from_state(&state);
+    // Nothing to test with relays off or before any custom URL is entered.
+    if settings.relay_mode == "disabled"
+        || (settings.relay_mode == "custom" && settings.relay_urls.is_empty())
+    {
+        state.set_relay_test_status("".into());
+        return;
+    }
+    state.set_relay_test_status("Testing connection…".into());
+    state.set_relay_test_failed(false);
+    let arg = settings.relay_config_arg();
+    let weak = ctx.weak.clone();
+    ctx.rt.spawn(async move {
+        let result = verify_relays(arg).await;
+        let _ = slint::invoke_from_event_loop(move || {
+            let Some(ui) = weak.upgrade() else { return };
+            if RELAY_TEST_RUN.load(Ordering::Relaxed) != run {
+                return;
+            }
+            let s = ui.global::<State>();
+            s.set_relay_test_failed(result.is_err());
+            let msg = match result {
+                Ok(resp) => match resp.url {
+                    Some(url) => format!("Connected to {url} ({}ms)", resp.latency_ms),
+                    None => format!("Connected ({}ms)", resp.latency_ms),
+                },
+                Err(e) => format!("Relay check failed: {e}"),
+            };
+            s.set_relay_test_status(msg.into());
+        });
+    });
+}
+
+/// Check the custom discovery server shown on the settings page is reachable.
+fn test_discovery(ctx: &AppCtx) {
+    let Some(ui) = ctx.weak.upgrade() else {
+        return;
+    };
+    let state = ui.global::<State>();
+    let run = DISCOVERY_TEST_RUN.fetch_add(1, Ordering::Relaxed) + 1;
+    let settings = settings_from_state(&state);
+    // Only a custom server needs checking, once its URL is entered.
+    if settings.discovery_mode != "custom" || settings.discovery_pkarr_relay_url.is_none() {
+        state.set_discovery_test_status("".into());
+        return;
+    }
+    state.set_discovery_test_status("Testing connection…".into());
+    state.set_discovery_test_failed(false);
+    let arg = settings.discovery_config_arg();
+    let weak = ctx.weak.clone();
+    ctx.rt.spawn(async move {
+        let result = verify_discovery(arg).await;
+        let _ = slint::invoke_from_event_loop(move || {
+            let Some(ui) = weak.upgrade() else { return };
+            if DISCOVERY_TEST_RUN.load(Ordering::Relaxed) != run {
+                return;
+            }
+            let s = ui.global::<State>();
+            s.set_discovery_test_failed(result.is_err());
+            let msg = match result {
+                Ok(resp) => match resp.url {
+                    Some(url) => format!(
+                        "Discovery server reachable: {url} ({}ms)",
+                        resp.latency_ms
+                    ),
+                    None => format!("Reachable ({}ms)", resp.latency_ms),
+                },
+                Err(e) => format!("Discovery check failed: {e}"),
+            };
+            s.set_discovery_test_status(msg.into());
+        });
+    });
+}
+
 fn register_settings(ctx: &AppCtx) {
     let Some(ui) = ctx.weak.upgrade() else {
         return;
@@ -1087,6 +1267,7 @@ fn register_settings(ctx: &AppCtx) {
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(ui) = weak.upgrade() {
                             ui.global::<State>().set_downloads_dir(text.into());
+                            ui.global::<Logic>().invoke_save_settings();
                         }
                     });
                 }
@@ -1139,226 +1320,25 @@ fn register_settings(ctx: &AppCtx) {
         });
     }
 
+    // Text fields save after a pause in typing; every other control saves at once.
+    let save_timer = Rc::new(slint::Timer::default());
+
     {
         let ctx = ctx.clone();
+        let save_timer = save_timer.clone();
         logic.on_save_settings(move || {
-            let new_settings = {
-                let Some(ui) = ctx.weak.upgrade() else { return };
-                let state = ui.global::<State>();
-                settings_from_state(&state)
-            };
-
-            *ctx.settings.lock().unwrap() = new_settings.clone();
-            let path = ctx.settings_path.clone();
-            let weak = ctx.weak.clone();
-            let ctx_bg = ctx.clone();
-            ctx.rt
-                .spawn_blocking(move || match new_settings.save(&path) {
-                    Ok(()) => {
-                        let weak = weak.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = weak.upgrade() {
-                                let state = ui.global::<State>();
-                                state.set_settings_status("Saved.".into());
-                                state.set_settings_failed(false);
-                                toast(&ui, "Settings saved", false);
-                            }
-                        });
-                        let Some(node) = ctx_bg.node() else {
-                            return;
-                        };
-                        let (relay, discovery, disc) = {
-                            let cfg = ctx_bg.settings.lock().unwrap().clone();
-                            (
-                                cfg.relay_mode(),
-                                cfg.discovery_mode(),
-                                cfg.discoverability(),
-                            )
-                        };
-                        ctx_bg.rt.spawn(async move {
-                            if let Err(e) = node.reconfigure_network(relay.into(), discovery).await
-                            {
-                                tracing::warn!("reconfigure failed: {e}");
-                            }
-                            if let Err(e) = node.set_discoverability(disc).await {
-                                tracing::warn!("discoverability change failed: {e}");
-                            }
-                        });
-                    }
-                    Err(e) => {
-                        let msg = format!("Could not save settings: {e}");
-                        let weak = weak.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = weak.upgrade() {
-                                let state = ui.global::<State>();
-                                state.set_settings_status(msg.clone().into());
-                                state.set_settings_failed(true);
-                                toast(&ui, &msg, true);
-                            }
-                        });
-                    }
-                });
+            save_timer.stop();
+            save_settings(&ctx);
         });
     }
 
     {
         let ctx = ctx.clone();
-        logic.on_test_relay(move || {
-            let Some(ui) = ctx.weak.upgrade() else {
-                return;
-            };
-            let arg = settings_from_state(&ui.global::<State>()).relay_config_arg();
-            let weak = ctx.weak.clone();
-            ctx.rt.spawn(async move {
-                let _ = slint::invoke_from_event_loop({
-                    let weak = weak.clone();
-                    move || {
-                        if let Some(ui) = weak.upgrade() {
-                            let s = ui.global::<State>();
-                            s.set_relay_testing(true);
-                            s.set_relay_test_status("Testing…".into());
-                            s.set_relay_test_failed(false);
-                        }
-                    }
-                });
-                let result = verify_relays(arg).await;
-                let _ = slint::invoke_from_event_loop({
-                    let weak = weak.clone();
-                    move || {
-                        if let Some(ui) = weak.upgrade() {
-                            let s = ui.global::<State>();
-                            s.set_relay_testing(false);
-                            s.set_relay_test_failed(result.is_err());
-                            match result {
-                                Ok(resp) => {
-                                    let msg = match resp.url {
-                                        Some(url) => {
-                                            format!("Connected to {url} ({}ms)", resp.latency_ms)
-                                        }
-                                        None => format!("Connected ({}ms)", resp.latency_ms),
-                                    };
-                                    s.set_relay_test_status(msg.into());
-                                    toast(&ui, "Relay connection verified", false);
-                                }
-                                Err(e) => {
-                                    let msg = format!("Relay check failed: {e}");
-                                    s.set_relay_test_status(msg.clone().into());
-                                    toast(&ui, &msg, true);
-                                }
-                            }
-                        }
-                    }
-                });
-            });
-        });
-    }
-
-    {
-        let ctx = ctx.clone();
-        logic.on_check_relay_status(move || {
-            let Some(ui) = ctx.weak.upgrade() else {
-                return;
-            };
-            let arg = settings_from_state(&ui.global::<State>()).relay_config_arg();
-            let weak = ctx.weak.clone();
-            ctx.rt.spawn(async move {
-                match get_relay_status(Some(arg)).await {
-                    Ok(resp) => {
-                        let label = match resp.kind.as_str() {
-                            "disabled" => "Relay disabled".to_string(),
-                            "custom" => format!(
-                                "Custom relay: {}",
-                                resp.url.as_deref().unwrap_or("unreachable")
-                            ),
-                            "public" => {
-                                format!("Public relay: {}", resp.url.as_deref().unwrap_or("n0"))
-                            }
-                            _ => "Relay unavailable".to_string(),
-                        };
-                        let fell_back = resp.fell_back_to_public;
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = weak.upgrade() {
-                                let state = ui.global::<State>();
-                                state.set_relay_status(label.into());
-                                state.set_relay_status_failed(false);
-                                if fell_back {
-                                    toast(
-                                        &ui,
-                                        "Custom relay unreachable, using public relays",
-                                        true,
-                                    );
-                                }
-                            }
-                        });
-                    }
-                    Err(e) => {
-                        let msg = format!("Relay status failed: {e}");
-                        let _ = slint::invoke_from_event_loop({
-                            let weak = weak.clone();
-                            move || {
-                                if let Some(ui) = weak.upgrade() {
-                                    let state = ui.global::<State>();
-                                    state.set_relay_status(msg.clone().into());
-                                    state.set_relay_status_failed(true);
-                                    toast(&ui, &msg, true);
-                                }
-                            }
-                        });
-                    }
-                }
-            });
-        });
-    }
-
-    {
-        let ctx = ctx.clone();
-        logic.on_test_discovery(move || {
-            let Some(ui) = ctx.weak.upgrade() else {
-                return;
-            };
-            let arg = settings_from_state(&ui.global::<State>()).discovery_config_arg();
-            let weak = ctx.weak.clone();
-            ctx.rt.spawn(async move {
-                let _ = slint::invoke_from_event_loop({
-                    let weak = weak.clone();
-                    move || {
-                        if let Some(ui) = weak.upgrade() {
-                            let s = ui.global::<State>();
-                            s.set_discovery_testing(true);
-                            s.set_discovery_test_status("Testing…".into());
-                            s.set_discovery_test_failed(false);
-                        }
-                    }
-                });
-                let result = verify_discovery(arg).await;
-                let _ = slint::invoke_from_event_loop({
-                    let weak = weak.clone();
-                    move || {
-                        if let Some(ui) = weak.upgrade() {
-                            let s = ui.global::<State>();
-                            s.set_discovery_testing(false);
-                            s.set_discovery_test_failed(result.is_err());
-                            match result {
-                                Ok(resp) => {
-                                    let msg = match resp.url {
-                                        Some(url) => format!(
-                                            "Discovery server reachable: {url} ({}ms)",
-                                            resp.latency_ms
-                                        ),
-                                        None => format!("Reachable ({}ms)", resp.latency_ms),
-                                    };
-                                    s.set_discovery_test_status(msg.into());
-                                    toast(&ui, "Discovery server verified", false);
-                                }
-                                Err(e) => {
-                                    let msg = format!("Discovery check failed: {e}");
-                                    s.set_discovery_test_status(msg.clone().into());
-                                    toast(&ui, &msg, true);
-                                }
-                            }
-                        }
-                    }
-                });
+        let save_timer = save_timer.clone();
+        logic.on_settings_edited(move || {
+            let ctx = ctx.clone();
+            save_timer.start(slint::TimerMode::SingleShot, SETTINGS_EDIT_DELAY, move || {
+                save_settings(&ctx)
             });
         });
     }
@@ -1367,6 +1347,11 @@ fn register_settings(ctx: &AppCtx) {
         let ctx = ctx.clone();
         logic.on_page_changed(move |page: SharedString| {
             let page = page.to_string();
+            // Don't leave a text-field edit waiting on its typing pause.
+            if page != "settings" && save_timer.running() {
+                save_timer.stop();
+                save_settings(&ctx);
+            }
             if page != "add-peer" {
                 if let Some(ui) = ctx.weak.upgrade() {
                     crate::qr::stop_scan(&ui);
@@ -1383,6 +1368,8 @@ fn register_settings(ctx: &AppCtx) {
                 if let Some(ui) = ctx.weak.upgrade() {
                     ui.global::<State>().set_name_editing(false);
                 }
+                test_relay(&ctx);
+                test_discovery(&ctx);
             }
         });
     }

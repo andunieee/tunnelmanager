@@ -136,16 +136,18 @@ export component SettingsPage inherits Rectangle {
                     CheckBox {
                         text: "Keep a transfer history";
                         checked <=> State.history-enabled;
+                        toggled => { Logic.save-settings(); }
                     }
                 }
 
                 SettingsCard {
-                    title: "Privacy";
+                    title: "Who can see you";
                     icon: Icons.shield;
 
                     ComboBox {
                         model: ["Everyone nearby", "Paired devices only", "Nobody (hidden)"];
                         current-index <=> State.discoverability;
+                        selected => { Logic.save-settings(); }
                     }
                 }
 
@@ -156,11 +158,13 @@ export component SettingsPage inherits Rectangle {
                     ComboBox {
                         model: ["Default (n0 public relays)", "Disabled (direct connections only)", "Custom relays"];
                         current-index <=> State.relay-mode;
+                        selected => { Logic.save-settings(); }
                     }
                     if State.relay-mode == 2: Field {
                         label: "Relay URLs";
                         TextEdit {
                             text <=> State.relay-urls;
+                            edited => { Logic.settings-edited(); }
                             height: 72px;
                             wrap: no-wrap;
                         }
@@ -169,6 +173,7 @@ export component SettingsPage inherits Rectangle {
                         label: "Auth token (optional)";
                         LineEdit {
                             text <=> State.relay-token;
+                            edited => { Logic.settings-edited(); }
                             input-type: password;
                             placeholder-text: "Token";
                         }
@@ -178,25 +183,12 @@ export component SettingsPage inherits Rectangle {
                         ComboBox {
                             model: ["Fail the transfer (strict)", "Fall back to public relays"];
                             current-index <=> State.relay-fallback;
+                            selected => { Logic.save-settings(); }
                         }
-                    }
-                    if State.relay-mode != 1: HorizontalLayout {
-                        spacing: Theme.space-2;
-                        alignment: start;
-                        SecondaryButton {
-                            label: State.relay-testing ? "Testing…" : "Test connection";
-                            enabled: !State.relay-testing;
-                            clicked => { Logic.test-relay(); }
-                        }
-                        SecondaryButton { label: "Show status"; clicked => { Logic.check-relay-status(); } }
                     }
                     if State.relay-test-status != "": StatusText {
                         label: State.relay-test-status;
                         error: State.relay-test-failed;
-                    }
-                    if State.relay-status != "": StatusText {
-                        label: State.relay-status;
-                        error: State.relay-status-failed;
                     }
                 }
 
@@ -207,11 +199,13 @@ export component SettingsPage inherits Rectangle {
                     ComboBox {
                         model: ["Default (n0)", "Custom pkarr relay"];
                         current-index <=> State.discovery-mode;
+                        selected => { Logic.save-settings(); }
                     }
                     if State.discovery-mode == 1: Field {
                         label: "pkarr relay URL";
                         LineEdit {
                             text <=> State.discovery-pkarr-url;
+                            edited => { Logic.settings-edited(); }
                             placeholder-text: "https://dns.example.com/pkarr";
                         }
                     }
@@ -219,15 +213,8 @@ export component SettingsPage inherits Rectangle {
                         label: "DNS origin (optional)";
                         LineEdit {
                             text <=> State.discovery-dns-origin;
+                            edited => { Logic.settings-edited(); }
                             placeholder-text: "example.com";
-                        }
-                    }
-                    if State.discovery-mode == 1: HorizontalLayout {
-                        alignment: start;
-                        SecondaryButton {
-                            label: State.discovery-testing ? "Testing…" : "Test connection";
-                            enabled: !State.discovery-testing;
-                            clicked => { Logic.test-discovery(); }
                         }
                     }
                     if State.discovery-test-status != "": StatusText {
@@ -236,19 +223,9 @@ export component SettingsPage inherits Rectangle {
                     }
                 }
 
-                HorizontalLayout {
-                    spacing: Theme.space-3;
-                    alignment: start;
-                    padding-bottom: Theme.space-4;
-                    PrimaryButton {
-                        label: "Save settings";
-                        clicked => { Logic.save-settings(); }
-                    }
-                    if State.settings-status != "": StatusText {
-                        label: State.settings-status;
-                        error: State.settings-failed;
-                        vertical-alignment: center;
-                    }
+                if State.settings-status != "": StatusText {
+                    label: State.settings-status;
+                    error: true;
                 }
             }
         }
