@@ -1,6 +1,6 @@
 [package]
 name = "flipflop"
-version = "0.0.2"
+version = "0.0.4"
 edition = "2021"
 license = "AGPL-3.0-only"
 description = "Send files and text straight to your own trusted devices, desktop and Android, over LAN, Bluetooth or the internet"
